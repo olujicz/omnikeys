@@ -1,6 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 import OmniKeysCore
+import UniformTypeIdentifiers
 import os
 
 /// Owns the app's moving parts and keeps them in sync with config.toml and OmniWM's settings.toml.
@@ -36,6 +37,8 @@ final class AppController {
         statusItem = StatusItem(actions: .init(
             show: { [weak self] in self?.showSheet() },
             openSettings: { [weak self] in self?.openSettingsFile() },
+            exportShortcuts: { [weak self] in self?.exportShortcuts() },
+            importShortcuts: { [weak self] in self?.importShortcuts() },
             toggleLaunchAtLogin: { [weak self] in self?.toggleLaunchAtLogin() },
             about: {
                 NSApp.activate()
@@ -78,6 +81,45 @@ final class AppController {
             try open.run()
         } catch {
             Logger.app.error("Could not open settings: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func exportShortcuts() {
+        do {
+            let text = try String(contentsOf: paths.omniWMSettingsFile, encoding: .utf8)
+            let settings = try OmniWMSettings.parse(text, appName: AppNameResolver.name(for:))
+            let data = try ShortcutTransfer.export(settings: settings)
+            let panel = NSSavePanel()
+            panel.title = "Export OmniKeys Shortcuts"
+            panel.nameFieldStringValue = "OmniKeys-shortcuts.json"
+            panel.allowedContentTypes = [.json]
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            try data.write(to: url, options: .atomic)
+            showNotice(title: "Shortcuts Exported", message: "Your OmniKeys shortcuts were exported successfully.")
+        } catch {
+            showError("Could not export shortcuts: \(error.localizedDescription)")
+        }
+    }
+
+    func importShortcuts() {
+        let panel = NSOpenPanel()
+        panel.title = "Import OmniKeys Shortcuts"
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let document = try ShortcutTransfer.import(data: Data(contentsOf: url))
+            let current = try String(contentsOf: paths.omniWMSettingsFile, encoding: .utf8)
+            let updated = try ShortcutTransfer.apply(document, to: current)
+            let backup = try backupSettings()
+            try updated.write(to: paths.omniWMSettingsFile, atomically: true, encoding: .utf8)
+            reload()
+            showNotice(
+                title: "Shortcuts Imported",
+                message: "Your shortcuts were imported successfully. A backup was saved at \(backup.lastPathComponent)."
+            )
+        } catch {
+            showError("Could not import shortcuts: \(error.localizedDescription)")
         }
     }
 
@@ -149,5 +191,30 @@ final class AppController {
             }
             return ScreenMetrics.mouseScreen ?? ScreenMetrics.mainScreen
         }
+    }
+
+    private func backupSettings() throws -> URL {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let backup = paths.omniWMSettingsFile.appendingPathExtension("backup-\(formatter.string(from: Date()))")
+        try FileManager.default.copyItem(at: paths.omniWMSettingsFile, to: backup)
+        return backup
+    }
+
+    private func showNotice(title: String, message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = title
+        alert.informativeText = message
+        alert.runModal()
+    }
+
+    private func showError(_ message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "OmniKeys"
+        alert.informativeText = message
+        alert.runModal()
     }
 }

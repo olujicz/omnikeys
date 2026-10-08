@@ -32,6 +32,8 @@ Esc, the same hotkey, or a click outside the sheet closes it. ⌘, opens the set
 
 The menu-bar icon offers the same actions, plus Launch at Login. It also lists any problems with your settings.
 
+Use Export Shortcuts… and Import Shortcuts… in the menu-bar menu to transfer assigned OmniWM shortcuts and Hyper key modifiers between Macs. Imports preserve workspaces and other OmniWM settings, and save a timestamped backup of the existing settings file first.
+
 ## Settings
 
 Settings live in `~/.config/omnikeys/config.toml`. OmniKeys creates the file on first launch, with every option documented inline. Changes apply within a second.
@@ -47,7 +49,7 @@ An older `~/.config/omniwm/omnikeys.toml` is moved there automatically.
 **Logs.**
 
 ```sh
-log stream --predicate 'subsystem == "io.github.olujicz.omnikeys"'
+log stream --predicate 'subsystem == "rs.in.olujic.omnikeys"'
 ```
 
 **Uninstall.**

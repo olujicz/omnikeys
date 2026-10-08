@@ -3,7 +3,7 @@ import OmniKeysCore
 import os
 
 extension Logger {
-    static let app = Logger(subsystem: Bundle.main.bundleIdentifier ?? "io.github.olujicz.omnikeys", category: "app")
+    static let app = Logger(subsystem: Bundle.main.bundleIdentifier ?? "rs.in.olujic.omnikeys", category: "app")
 }
 
 extension ConfigPaths {

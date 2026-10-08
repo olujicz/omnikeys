@@ -1,6 +1,6 @@
 import ProjectDescription
 
-let bundleID = "io.github.olujicz.omnikeys"
+let bundleID = "rs.in.olujic.omnikeys"
 let macOS14 = DeploymentTargets.macOS("14.0")
 
 let project = Project(

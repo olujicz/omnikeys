@@ -16,10 +16,10 @@ cask "omnikeys" do
 
   app "OmniKeys.app"
 
-  uninstall quit: "io.github.olujicz.omnikeys"
+  uninstall quit: "rs.in.olujic.omnikeys"
 
   zap trash: [
     "~/.config/omnikeys",
-    "~/Library/Preferences/io.github.olujicz.omnikeys.plist",
+    "~/Library/Preferences/rs.in.olujic.omnikeys.plist",
   ]
 end

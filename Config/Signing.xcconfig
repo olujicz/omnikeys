@@ -1,7 +1,10 @@
-// Local builds are signed ad hoc ("Sign to Run Locally").
+// Local builds stay unsigned. Ad hoc-signing an app that embeds a framework
+// produces a framework Team ID mismatch on current macOS versions, so the app
+// exits before applicationDidFinishLaunching and never creates its status item.
 // For Developer ID builds create Config/Signing.local.xcconfig (gitignored) containing:
 //   CODE_SIGN_IDENTITY = Developer ID Application
 //   DEVELOPMENT_TEAM = <your team id>
+CODE_SIGNING_ALLOWED = NO
 CODE_SIGN_STYLE = Manual
 CODE_SIGN_IDENTITY = -
 DEVELOPMENT_TEAM =

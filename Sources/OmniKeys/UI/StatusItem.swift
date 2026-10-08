@@ -7,6 +7,8 @@ final class StatusItem {
     struct Actions {
         var show: @MainActor () -> Void
         var openSettings: @MainActor () -> Void
+        var exportShortcuts: @MainActor () -> Void
+        var importShortcuts: @MainActor () -> Void
         var toggleLaunchAtLogin: @MainActor () -> Void
         var about: @MainActor () -> Void
         var quit: @MainActor () -> Void
@@ -49,6 +51,8 @@ final class StatusItem {
             menu.addItem(.separator())
         }
         menu.addItem(ActionMenuItem("Open Settings File…", key: ",", handler: actions.openSettings))
+        menu.addItem(ActionMenuItem("Export Shortcuts…", handler: actions.exportShortcuts))
+        menu.addItem(ActionMenuItem("Import Shortcuts…", handler: actions.importShortcuts))
         let loginTitle = launchAtLogin == .requiresApproval ? "Launch at Login (approve in System Settings)" : "Launch at Login"
         let login = ActionMenuItem(loginTitle, handler: actions.toggleLaunchAtLogin)
         login.state = launchAtLogin == .enabled ? .on : .off

@@ -27,7 +27,7 @@ echo "==> Archiving $VERSION ($BUILD_NUMBER)"
 mise exec -- tuist generate --no-open
 xcodebuild -workspace OmniKeys.xcworkspace -scheme OmniKeys -configuration Release \
   -destination 'generic/platform=macOS' -archivePath "$OUT/OmniKeys.xcarchive" -quiet archive \
-  CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM" \
+  CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM" \
   OTHER_CODE_SIGN_FLAGS="--timestamp" MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
 
 echo "==> Exporting"
