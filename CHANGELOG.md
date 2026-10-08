@@ -20,7 +20,7 @@ All notable changes to this project are documented here. The format follows
 - The header shows your actual Hyper modifiers instead of assuming Caps Lock.
 
 ### Removed
-- `install.sh` and its KeepAlive LaunchAgent. Use Homebrew, or `make install-dev` from source.
+- `install.sh` and its KeepAlive LaunchAgent. Use Homebrew, or `make install-dev` from source. If you used the old installer, remove its LaunchAgent (it otherwise keeps relaunching the old app, which competes for the hotkey): `launchctl bootout gui/$(id -u)/local.omnikeys; rm ~/Library/LaunchAgents/local.omnikeys.plist`.
 
 [Unreleased]: https://github.com/olujicz/omnikeys/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/olujicz/omnikeys/releases/tag/v0.1.0

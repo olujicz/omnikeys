@@ -18,6 +18,12 @@ Or download the zip from [Releases](https://github.com/olujicz/omnikeys/releases
 
 Requires macOS 14 or later and OmniWM.
 
+Upgrading from the old `install.sh`? Remove its LaunchAgent first, otherwise it keeps relaunching the old app, which competes for the hotkey:
+
+```sh
+launchctl bootout gui/$(id -u)/local.omnikeys; rm ~/Library/LaunchAgents/local.omnikeys.plist
+```
+
 ## Use
 
 Press ✦ Hyper + / to open the sheet. Hyper is the set of modifiers that OmniWM's Hyper key sends.

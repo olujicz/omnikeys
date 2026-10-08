@@ -41,7 +41,11 @@ ZIP="$OUT/OmniKeys-$VERSION.zip"
 ditto -c -k --keepParent "$APP" "$ZIP"
 
 echo "==> Notarizing (this can take a few minutes)"
-RESULT="$(xcrun notarytool submit "$ZIP" --wait --output-format json --keychain-profile "${NOTARY_PROFILE:-omnikeys-notary}")"
+RESULT="$(xcrun notarytool submit "$ZIP" --wait --output-format json --keychain-profile "${NOTARY_PROFILE:-omnikeys-notary}")" || {
+  echo "$RESULT" >&2
+  echo "notarytool failed" >&2
+  exit 1
+}
 STATUS="$(plutil -extract status raw -o - - <<<"$RESULT")"
 if [[ "$STATUS" != "Accepted" ]]; then
   echo "$RESULT" >&2
