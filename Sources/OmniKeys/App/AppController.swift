@@ -1,0 +1,153 @@
+import AppKit
+import Carbon.HIToolbox
+import OmniKeysCore
+import os
+
+/// Owns the app's moving parts and keeps them in sync with config.toml and OmniWM's settings.toml.
+@MainActor
+final class AppController {
+    private let paths: ConfigPaths
+    private let store: ConfigStore
+    private let hotKey = HotKey()
+    private let presenter = PanelPresenter()
+    private let omniWM = OmniWMClient()
+    private var pollTimer: Timer?
+    private var statusItem: StatusItem?
+    private var stamps: [Date?] = []
+    private var registeredHotkey: HotkeySpec?
+    private var hotkeyIssue: ConfigIssue?
+    private var isPresenting = false
+    private(set) var state: LoadedState
+
+    init(paths: ConfigPaths) {
+        self.paths = paths
+        store = ConfigStore(paths: paths)
+        state = store.load()
+    }
+
+    private var hotkeyText: String {
+        let (mods, key) = Binding.split(state.config.hotkey)
+        return (mods + [key]).joined(separator: " ")
+    }
+
+    func start() {
+        hotKey.onPress = { [weak self] in self?.toggle() }
+        presenter.onOpenSettings = { [weak self] in self?.openSettingsFile() }
+        statusItem = StatusItem(actions: .init(
+            show: { [weak self] in self?.showSheet() },
+            openSettings: { [weak self] in self?.openSettingsFile() },
+            toggleLaunchAtLogin: { [weak self] in self?.toggleLaunchAtLogin() },
+            about: {
+                NSApp.activate()
+                NSApp.orderFrontStandardAboutPanel(nil)
+            },
+            quit: { NSApp.terminate(nil) }
+        ))
+        reload()
+        // Poll both files' modification dates: cheap, and catches atomic saves and deletion.
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reloadIfChanged() }
+        }
+    }
+
+    func toggle() {
+        if presenter.isVisible {
+            presenter.dismiss(restoreFocus: true)
+        } else {
+            showSheet()
+        }
+    }
+
+    func showSheet() {
+        guard !isPresenting else { return }
+        isPresenting = true
+        Task {
+            defer { isPresenting = false }
+            guard let screen = await screenForSheet() else { return }
+            presenter.present(model: state.model, config: state.config, on: screen)
+        }
+    }
+
+    /// Opens config.toml in the default text editor (recreating it first if it was deleted).
+    func openSettingsFile() {
+        _ = store.prepare()
+        let open = Process()
+        open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        open.arguments = ["-t", paths.configFile.path]
+        do {
+            try open.run()
+        } catch {
+            Logger.app.error("Could not open settings: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func updateStatusItem() {
+        statusItem?.update(visible: state.config.showMenuBarIcon, hotkey: hotkeyText, issues: state.issues)
+    }
+
+    private func toggleLaunchAtLogin() {
+        do {
+            try LoginItem.setEnabled(LoginItem.status != .enabled)
+        } catch {
+            Logger.app.error("Launch at login change failed: \(error.localizedDescription, privacy: .public)")
+            NSApp.activate()
+            NSAlert(error: error).runModal()
+        }
+        updateStatusItem()
+    }
+
+    private func reloadIfChanged() {
+        guard store.fileStamps() != stamps else { return }
+        reload()
+    }
+
+    private func reload() {
+        let setupIssues = store.prepare() // recreates a deleted config.toml
+        var loaded = store.load()
+        registerHotkey(loaded.hotkey)
+        loaded.issues = setupIssues + loaded.issues + [hotkeyIssue].compactMap(\.self)
+        state = loaded
+        stamps = store.fileStamps()
+        updateStatusItem()
+        for issue in state.issues {
+            Logger.app.warning("\(issue.message, privacy: .public)")
+        }
+        if presenter.isVisible {
+            // Redraw in place.
+            showSheet()
+        }
+    }
+
+    private func registerHotkey(_ spec: HotkeySpec) {
+        guard spec != registeredHotkey else { return }
+        let status = hotKey.register(spec)
+        if status == noErr {
+            registeredHotkey = spec
+            hotkeyIssue = nil
+        } else {
+            registeredHotkey = nil
+            hotkeyIssue = ConfigIssue(
+                status == OSStatus(eventHotKeyExistsErr)
+                    ? "The hotkey is already used by another app. Pick a different “hotkey” in config.toml."
+                    : "The hotkey could not be registered (error \(status)); another app may already use it. "
+                    + "Pick a different “hotkey” in config.toml."
+            )
+        }
+    }
+
+    private func screenForSheet() async -> NSScreen? {
+        switch state.config.screen {
+        case .main:
+            return ScreenMetrics.mainScreen
+        case .mouse:
+            return ScreenMetrics.mouseScreen ?? ScreenMetrics.mainScreen
+        case .focused:
+            if let id = await omniWM.focusedDisplayID(),
+               let screen = ScreenMetrics.screen(displayID: id)
+            {
+                return screen
+            }
+            return ScreenMetrics.mouseScreen ?? ScreenMetrics.mainScreen
+        }
+    }
+}

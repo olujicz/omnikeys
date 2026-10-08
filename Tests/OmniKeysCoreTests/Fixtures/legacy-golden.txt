@@ -1,0 +1,60 @@
+## Navigate
+Hyper H/J/K/L	Focus window left/down/up/right
+Hyper ⇧ H/J/K/L	Move window left/down/up/right
+Hyper P	Previously focused window
+Hyper ,	Pull window into column
+Hyper .	Push window out of column
+Hyper Home	First column
+Hyper ⇧ Home	Move column to first
+Hyper End	Last column
+Hyper ⇧ End	Move column to last
+⌥ ⌘ 1–9	Tab / window in column 1–9
+## Workspaces & monitors
+Hyper 1–9	Go to workspace 1–9
+Hyper ⇧ 1–9	Send window to workspace 1–9
+Hyper ⇥	Last workspace (back & forth)
+Hyper ⇧ ⇥	Last workspace on this screen
+Hyper ↓	Next workspace
+Hyper ↑	Previous workspace
+Hyper ⇧ PgUp	Send column to workspace above
+Hyper ⇧ PgDn	Send column to workspace below
+Hyper →	Next monitor
+Hyper ←	Previous monitor
+Hyper ⇧ ←↓↑→	Send window to monitor left/down/up/right
+## Columns & sizing
+Hyper C	Center column
+Hyper ↩	Fullscreen
+Hyper ⇧ ↩	Native fullscreen
+Hyper T	Tabbed column
+Hyper R	Cycle column width
+Hyper ⇧ R	Cycle column width back
+Hyper M	Maximize column
+Hyper ⇧ M	Fill free space
+Hyper −	Column narrower
+Hyper ⇧ −	Window shorter
+Hyper =	Column wider
+Hyper ⇧ =	Window taller
+Hyper B	Balance sizes
+## Windows
+Hyper S	Show scratchpad 1
+Hyper ⇧ S	Put window in scratchpad 1
+Hyper G	Raise floating windows
+Hyper F	Float / tile window
+Hyper ⇧ F	Focus floating ⇄ tiled
+Hyper Q	Close window
+## Tools
+Hyper Space	Command palette
+Hyper N	App menu anywhere
+Hyper I	Hidden menu-bar icons
+Hyper `	Quake terminal
+Hyper E	Switch layout niri ⇄ dwindle
+Hyper O	Overview
+Hyper /	This cheat sheet
+## Workspaces
+1	Code	Built-in Retina Display	Editor,Terminal
+2		main	Browser
+3			
+## Floating
+Calculator
+## Hyper
+Control+Option+Command
