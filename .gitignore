@@ -1,0 +1,12 @@
+.DS_Store
+/docs/
+/build/
+/.baseline/
+/Derived/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+.swiftpm/
+Config/Signing.local.xcconfig
+*.p12
+*.p8
