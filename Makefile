@@ -9,7 +9,7 @@ DEBUG_APP := $(DERIVED)/Build/Products/Debug/OmniKeys.app
 
 # GitHub Actions sets CI=true: treat warnings as errors there.
 ifdef CI
-XCODE_FLAGS += SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+XCODE_FLAGS += OMNIKEYS_WARNINGS_AS_ERRORS=YES
 endif
 
 .PHONY: help bootstrap generate build test lint format run render clean install-dev release

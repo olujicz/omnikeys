@@ -15,6 +15,10 @@ let project = Project(
             "MARKETING_VERSION": "0.1.0",
             "CURRENT_PROJECT_VERSION": "1",
             "DEAD_CODE_STRIPPING": "YES",
+            // CI flips OMNIKEYS_WARNINGS_AS_ERRORS; a command-line SWIFT_TREAT_WARNINGS_AS_ERRORS would also hit
+            // packages (TOMLDecoder builds with -suppress-warnings, which conflicts).
+            "SWIFT_TREAT_WARNINGS_AS_ERRORS": "$(OMNIKEYS_WARNINGS_AS_ERRORS)",
+            "OMNIKEYS_WARNINGS_AS_ERRORS": "NO",
         ],
         configurations: [
             .debug(name: "Debug", xcconfig: "Config/Signing.xcconfig"),
