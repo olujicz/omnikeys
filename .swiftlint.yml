@@ -6,7 +6,6 @@ included:
 excluded:
   - build
   - Derived
-  - Sources/OmniKeys/App/main.swift # legacy single file, removed in Task 5
 # SwiftFormat owns layout; SwiftLint owns everything else.
 disabled_rules:
   - trailing_comma

@@ -42,12 +42,7 @@ let project = Project(
             ]),
             sources: ["Sources/OmniKeys/**"],
             dependencies: [.target(name: "OmniKeysCore")],
-            settings: .settings(base: [
-                "ENABLE_HARDENED_RUNTIME": "YES",
-                // Legacy single-file code until Task 5 replaces it. Delete these two lines then.
-                "SWIFT_VERSION": "5.0",
-                "SWIFT_STRICT_CONCURRENCY": "minimal",
-            ])
+            settings: .settings(base: ["ENABLE_HARDENED_RUNTIME": "YES"])
         ),
         .target(
             name: "OmniKeysCore",
@@ -68,13 +63,22 @@ let project = Project(
             resources: ["Tests/OmniKeysCoreTests/Fixtures/**"],
             dependencies: [.target(name: "OmniKeysCore")]
         ),
+        .target(
+            name: "OmniKeysTests",
+            destinations: .macOS,
+            product: .unitTests,
+            bundleId: "\(bundleID).tests",
+            deploymentTargets: macOS14,
+            sources: ["Tests/OmniKeysTests/**"],
+            dependencies: [.target(name: "OmniKeys")]
+        ),
     ],
     schemes: [
         .scheme(
             name: "OmniKeys",
             shared: true,
             buildAction: .buildAction(targets: ["OmniKeys"]),
-            testAction: .targets(["OmniKeysCoreTests"]),
+            testAction: .targets(["OmniKeysCoreTests", "OmniKeysTests"]),
             runAction: .runAction(executable: "OmniKeys"),
             archiveAction: .archiveAction(configuration: "Release")
         ),

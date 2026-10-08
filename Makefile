@@ -12,7 +12,7 @@ ifdef CI
 XCODE_FLAGS += SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
 endif
 
-.PHONY: help bootstrap generate build test lint format run clean
+.PHONY: help bootstrap generate build test lint format run render clean
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -45,3 +45,7 @@ run: build ## Build and launch the debug app (quits a running copy first)
 
 clean: ## Remove build output and generated projects
 	rm -rf build Derived *.xcodeproj *.xcworkspace
+
+render: build ## Render the fixture sheet to build/render.png
+	$(DEBUG_APP)/Contents/MacOS/OmniKeys --render build/render.png --settings Tests/OmniKeysCoreTests/Fixtures/settings.toml --config /dev/null
+	@echo "Wrote build/render.png"
