@@ -11,6 +11,7 @@ final class AppController {
     private let presenter = PanelPresenter()
     private let omniWM = OmniWMClient()
     private var pollTimer: Timer?
+    private var statusItem: StatusItem?
     private var stamps: [Date?] = []
     private var registeredHotkey: HotkeySpec?
     private var hotkeyIssue: ConfigIssue?
@@ -23,9 +24,24 @@ final class AppController {
         state = store.load()
     }
 
+    private var hotkeyText: String {
+        let (mods, key) = Binding.split(state.config.hotkey)
+        return (mods + [key]).joined(separator: " ")
+    }
+
     func start() {
         hotKey.onPress = { [weak self] in self?.toggle() }
         presenter.onOpenSettings = { [weak self] in self?.openSettingsFile() }
+        statusItem = StatusItem(actions: .init(
+            show: { [weak self] in self?.showSheet() },
+            openSettings: { [weak self] in self?.openSettingsFile() },
+            toggleLaunchAtLogin: { [weak self] in self?.toggleLaunchAtLogin() },
+            about: {
+                NSApp.activate()
+                NSApp.orderFrontStandardAboutPanel(nil)
+            },
+            quit: { NSApp.terminate(nil) }
+        ))
         reload()
         // Poll both files' modification dates: cheap, and catches atomic saves and deletion.
         pollTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -64,6 +80,20 @@ final class AppController {
         }
     }
 
+    private func updateStatusItem() {
+        statusItem?.update(visible: state.config.showMenuBarIcon, hotkey: hotkeyText, issues: state.issues)
+    }
+
+    private func toggleLaunchAtLogin() {
+        do {
+            try LoginItem.setEnabled(LoginItem.status != .enabled)
+        } catch {
+            Logger.app.error("Launch at login change failed: \(error.localizedDescription, privacy: .public)")
+            NSAlert(error: error).runModal()
+        }
+        updateStatusItem()
+    }
+
     private func reloadIfChanged() {
         guard store.fileStamps() != stamps else { return }
         reload()
@@ -76,6 +106,7 @@ final class AppController {
         loaded.issues = setupIssues + loaded.issues + [hotkeyIssue].compactMap(\.self)
         state = loaded
         stamps = store.fileStamps()
+        updateStatusItem()
         for issue in state.issues {
             Logger.app.warning("\(issue.message, privacy: .public)")
         }
