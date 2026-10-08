@@ -42,6 +42,7 @@ let project = Project(
             ]),
             sources: ["Sources/OmniKeys/**"],
             resources: ["Sources/OmniKeys/Resources/**"],
+            entitlements: "packaging/OmniKeys.entitlements",
             dependencies: [.target(name: "OmniKeysCore")],
             settings: .settings(base: [
                 "ENABLE_HARDENED_RUNTIME": "YES",

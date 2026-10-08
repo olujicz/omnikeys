@@ -12,7 +12,7 @@ ifdef CI
 XCODE_FLAGS += SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
 endif
 
-.PHONY: help bootstrap generate build test lint format run render clean
+.PHONY: help bootstrap generate build test lint format run render clean install-dev release
 
 help: ## Show this help
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -49,3 +49,10 @@ clean: ## Remove build output and generated projects
 render: build ## Render the fixture sheet to build/render.png
 	$(DEBUG_APP)/Contents/MacOS/OmniKeys --render build/render.png --settings Tests/OmniKeysCoreTests/Fixtures/settings.toml --config /dev/null
 	@echo "Wrote build/render.png"
+
+install-dev: ## Build Release into ~/Applications (removes the old LaunchAgent)
+	scripts/install-dev.sh
+
+release: ## Signed + notarized zip and cask: make release VERSION=1.2.3
+	@test -n "$(VERSION)" || { echo "Usage: make release VERSION=1.2.3"; exit 1; }
+	scripts/release.sh $(VERSION)
