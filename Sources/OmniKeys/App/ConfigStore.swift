@@ -60,10 +60,11 @@ struct ConfigStore {
         let settingsURL = settingsFile ?? paths.omniWMSettingsFile
         let configText = try? String(contentsOf: configURL, encoding: .utf8)
         let settingsText: Result<String, SettingsProblem> =
-            if let text = try? String(contentsOf: settingsURL, encoding: .utf8) {
-                .success(text)
-            } else {
+            if !FileManager.default.fileExists(atPath: settingsURL.path) {
                 .failure(.missing(path: settingsURL.path))
+            } else {
+                Result { try String(contentsOf: settingsURL, encoding: .utf8) }
+                    .mapError { .unreadable(path: settingsURL.path, reason: $0.localizedDescription) }
             }
         return LoadedState.make(configText: configText, settingsText: settingsText, settingsPath: settingsURL.path) {
             AppNameResolver.name(for: $0)
@@ -73,7 +74,8 @@ struct ConfigStore {
     /// Modification dates of both files, for the 1-second change poll (nil = missing).
     func fileStamps() -> [Date?] {
         [paths.configFile, paths.omniWMSettingsFile].map {
-            (try? FileManager.default.attributesOfItem(atPath: $0.path))?[.modificationDate] as? Date
+            (try? FileManager.default
+                .attributesOfItem(atPath: $0.resolvingSymlinksInPath().path))?[.modificationDate] as? Date
         }
     }
 }

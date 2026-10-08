@@ -2,6 +2,12 @@
 import Testing
 
 struct ConfigLoaderTests {
+    @Test func nanTextSizeFallsBackToDefault() {
+        let (config, issues) = ConfigLoader.load("textSize = nan")
+        #expect(config.textSize == 1.0)
+        #expect(issues.count == 1)
+    }
+
     @Test func emptyFileGivesDefaultsWithoutIssues() {
         let (config, issues) = ConfigLoader.load("")
         #expect(config == Config())

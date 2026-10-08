@@ -107,7 +107,7 @@ private struct ConfigReader {
 
     mutating func number(_ key: String, in range: ClosedRange<Double>) -> Double? {
         guard table.contains(key: key) else { return nil }
-        guard let value = try? table.float(forKey: key) else {
+        guard let value = try? table.float(forKey: key), value.isFinite else {
             report(key, "should be a number between \(format(range.lowerBound)) and \(format(range.upperBound))")
             return nil
         }
@@ -144,7 +144,7 @@ private struct ConfigReader {
         if let text = try? table.string(forKey: key), text == "auto" {
             return .auto
         }
-        if let value = try? table.float(forKey: key) {
+        if let value = try? table.float(forKey: key), value.isFinite {
             return .fraction(clamp(key, value, to: 0.3 ... 1))
         }
         report(key, "should be “auto” or a number between 0.3 and 1")

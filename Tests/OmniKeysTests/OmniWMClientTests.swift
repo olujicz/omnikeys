@@ -16,6 +16,17 @@ struct OmniWMClientTests {
         #expect(data?.isEmpty ?? true)
     }
 
+    /// A tool that ignores SIGTERM must still not hold the caller hostage.
+    @Test func runGivesUpOnTermIgnoringTool() async {
+        let start = ContinuousClock.now
+        _ = await OmniWMClient.run(
+            URL(fileURLWithPath: "/bin/sh"),
+            arguments: ["-c", "trap \"\" TERM; sleep 5"],
+            timeout: 0.3
+        )
+        #expect(ContinuousClock.now - start < .seconds(2))
+    }
+
     @Test func runReturnsNilForMissingTool() async {
         #expect(await OmniWMClient.run(URL(fileURLWithPath: "/nonexistent/tool"), arguments: [], timeout: 1) == nil)
     }

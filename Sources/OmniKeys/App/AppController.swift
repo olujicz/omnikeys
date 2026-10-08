@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import OmniKeysCore
 import os
 
@@ -89,6 +90,7 @@ final class AppController {
             try LoginItem.setEnabled(LoginItem.status != .enabled)
         } catch {
             Logger.app.error("Launch at login change failed: \(error.localizedDescription, privacy: .public)")
+            NSApp.activate()
             NSAlert(error: error).runModal()
         }
         updateStatusItem()
@@ -111,8 +113,9 @@ final class AppController {
             Logger.app.warning("\(issue.message, privacy: .public)")
         }
         if presenter.isVisible {
+            // Redraw in place.
             showSheet()
-        } // redraw in place
+        }
     }
 
     private func registerHotkey(_ spec: HotkeySpec) {
@@ -124,7 +127,9 @@ final class AppController {
         } else {
             registeredHotkey = nil
             hotkeyIssue = ConfigIssue(
-                "The hotkey could not be registered (error \(status)); another app may already use it. "
+                status == OSStatus(eventHotKeyExistsErr)
+                    ? "The hotkey is already used by another app. Pick a different “hotkey” in config.toml."
+                    : "The hotkey could not be registered (error \(status)); another app may already use it. "
                     + "Pick a different “hotkey” in config.toml."
             )
         }

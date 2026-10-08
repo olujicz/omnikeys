@@ -10,8 +10,10 @@ struct WorkspacesCard: View {
             Grid(alignment: .leading, horizontalSpacing: 22, verticalSpacing: 7) {
                 ForEach(Array(workspaces.enumerated()), id: \.offset) { _, workspace in
                     GridRow(alignment: .firstTextBaseline) {
-                        KeyChips(text: workspace.displayName.isEmpty ? workspace
-                            .name : "\(workspace.name) \(workspace.displayName)")
+                        let label = workspace.displayName.isEmpty
+                            ? workspace.name
+                            : "\(workspace.name) \(workspace.displayName)"
+                        KeyChips(text: label)
                         Text(workspace.display).font(.system(size: 15)).foregroundStyle(.secondary)
                         Text(workspace.apps.joined(separator: ", ")).font(.system(size: 15))
                     }

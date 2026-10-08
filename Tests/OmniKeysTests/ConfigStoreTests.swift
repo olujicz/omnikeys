@@ -68,4 +68,27 @@ struct ConfigStoreTests {
         )
         #expect(store.fileStamps() != before)
     }
+
+    @Test func fileStampsFollowSymlinks() throws {
+        let fileManager = FileManager.default
+        let target = paths.configFile.deletingLastPathComponent().appendingPathComponent("elsewhere/real.toml")
+        try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "textSize = 1\n".write(to: target, atomically: true, encoding: .utf8)
+        try fileManager.createSymbolicLink(at: paths.configFile, withDestinationURL: target)
+        let store = ConfigStore(paths: paths)
+        let before = store.fileStamps()
+        try fileManager.setAttributes([.modificationDate: Date(timeIntervalSinceNow: 100)], ofItemAtPath: target.path)
+        #expect(store.fileStamps() != before)
+    }
+
+    @Test func unreadableSettingsIsNotReportedAsMissing() throws {
+        try FileManager.default.createDirectory(
+            at: paths.omniWMSettingsFile.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data([0xFF, 0xFE, 0x00]).write(to: paths.omniWMSettingsFile)
+        let issues = ConfigStore(paths: paths).load().issues
+        #expect(issues
+            .contains { $0.message.hasPrefix("OmniWM settings at") && $0.message.contains("could not be read") })
+    }
 }
