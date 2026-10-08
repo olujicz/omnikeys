@@ -1,0 +1,77 @@
+/// Friendly names and groups for OmniWM action ids.
+public enum ActionCatalog {
+    /// Anything missing falls back to `humanize`.
+    public static let names: [String: String] = [
+        "focus": "Focus window", "move": "Move window",
+        "focusPrevious": "Previously focused window",
+        "focusColumnFirst": "First column", "focusColumnLast": "Last column",
+        "focusColumn": "Focus column", "focusWindowInColumn": "Tab / window in column",
+        "moveColumnToFirst": "Move column to first", "moveColumnToLast": "Move column to last",
+        "consumeWindowIntoColumn": "Pull window into column", "expelWindowFromColumn": "Push window out of column",
+        "centerColumn": "Center column",
+        "switchWorkspace": "Go to workspace", "moveToWorkspace": "Send window to workspace",
+        "workspaceBackAndForth": "Last workspace on this screen",
+        "focusMonitorPrevious": "Previous monitor", "focusMonitorNext": "Next monitor",
+        "focusMonitorLast": "Last workspace (back & forth)",
+        "moveWindowToMonitor": "Send window to monitor",
+        "moveColumnToWorkspaceUp": "Send column to workspace above",
+        "moveColumnToWorkspaceDown": "Send column to workspace below",
+        "toggleFullscreen": "Fullscreen", "toggleNativeFullscreen": "Native fullscreen",
+        "toggleContainerFullPrimarySpan": "Maximize column", "expandContainerToAvailablePrimarySpan": "Fill free space",
+        "cycleSizeForward": "Cycle column width", "cycleSizeBackward": "Cycle column width back",
+        "setContainerPrimarySpan": "Column width", "setWindowSecondarySpan": "Window height",
+        "balanceSizes": "Balance sizes", "toggleColumnTabbed": "Tabbed column",
+        "toggleFocusedWindowFloating": "Float / tile window", "toggleFloatingFocus": "Focus floating ⇄ tiled",
+        "raiseAllFloatingWindows": "Raise floating windows", "closeFocusedWindow": "Close window",
+        "toggleScratchpad": "Show scratchpad", "assignFocusedWindowToScratchpad": "Put window in scratchpad",
+        "openCommandPalette": "Command palette", "toggleOverview": "Overview", "openMenuAnywhere": "App menu anywhere",
+        "toggleHiddenBarPanel": "Hidden menu-bar icons", "toggleQuakeTerminal": "Quake terminal",
+        "toggleWorkspaceLayout": "Switch layout niri ⇄ dwindle",
+        "switchWorkspace.previous": "Previous workspace", "switchWorkspace.next": "Next workspace",
+        "setContainerPrimarySpan.decrease10Percent": "Column narrower",
+        "setContainerPrimarySpan.increase10Percent": "Column wider",
+        "setWindowSecondarySpan.decrease10Percent": "Window shorter",
+        "setWindowSecondarySpan.increase10Percent": "Window taller",
+    ]
+
+    public static let groupOrder = ["Navigate", "Workspaces & monitors", "Columns & sizing", "Windows", "Tools"]
+
+    private static let navigation: Set<String> = [
+        "focus", "move", "focusPrevious", "focusColumnFirst", "focusColumnLast", "focusColumn", "focusWindowInColumn",
+        "moveColumnToFirst", "moveColumnToLast", "consumeWindowIntoColumn", "expelWindowFromColumn", "moveColumn",
+    ]
+
+    public static func group(for base: String) -> String {
+        if navigation.contains(base) {
+            return "Navigate"
+        }
+        if base == "toggleWorkspaceLayout" {
+            return "Tools"
+        }
+        if base.lowercased().contains("workspace") || base.contains("Monitor") {
+            return "Workspaces & monitors"
+        }
+        if base.contains("Span") || base.contains("Size") || base.contains("Fullscreen")
+            || base == "centerColumn" || base == "toggleColumnTabbed"
+        {
+            return "Columns & sizing"
+        }
+        if base.contains("Float") || base.contains("Scratchpad") || base == "closeFocusedWindow" {
+            return "Windows"
+        }
+        return "Tools"
+    }
+
+    /// "switchWorkspace.next" -> "Switch workspace next"
+    public static func humanize(_ id: String) -> String {
+        var out = ""
+        for character in id.replacingOccurrences(of: ".", with: " ") {
+            if character.isUppercase {
+                out += " " + character.lowercased()
+            } else {
+                out.append(character)
+            }
+        }
+        return out.prefix(1).uppercased() + out.dropFirst()
+    }
+}
