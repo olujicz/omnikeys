@@ -1,3 +1,5 @@
+// swiftlint:disable all
+// swiftformat:disable all
 // OmniKeys — floating OmniWM cheat sheet.
 // Toggle: Hyper+/ (configurable). Close: same key, Esc, or click elsewhere. ⌘, opens the settings file.
 // Shortcuts are read live from OmniWM's own ~/.config/omniwm/settings.toml every time the panel opens.

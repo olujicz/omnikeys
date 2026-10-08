@@ -1,0 +1,28 @@
+included:
+  - Sources
+  - Tests
+  - Project.swift
+  - Tuist.swift
+excluded:
+  - build
+  - Derived
+  - Sources/OmniKeys/App/main.swift # legacy single file, removed in Task 5
+# SwiftFormat owns layout; SwiftLint owns everything else.
+disabled_rules:
+  - trailing_comma
+  - opening_brace
+  - vertical_parameter_alignment_on_call
+opt_in_rules:
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - empty_count
+  - first_where
+  - contains_over_first_not_nil
+  - sorted_first_last
+  - fatal_error_message
+line_length:
+  warning: 140
+  error: 200
+  ignores_comments: true
+identifier_name:
+  min_length: 1
