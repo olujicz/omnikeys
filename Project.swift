@@ -41,8 +41,12 @@ let project = Project(
                 "NSHumanReadableCopyright": "© 2026 Zoran Olujic. MIT License.",
             ]),
             sources: ["Sources/OmniKeys/**"],
+            resources: ["Sources/OmniKeys/Resources/**"],
             dependencies: [.target(name: "OmniKeysCore")],
-            settings: .settings(base: ["ENABLE_HARDENED_RUNTIME": "YES"])
+            settings: .settings(base: [
+                "ENABLE_HARDENED_RUNTIME": "YES",
+                "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+            ])
         ),
         .target(
             name: "OmniKeysCore",
