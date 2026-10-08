@@ -44,19 +44,24 @@ struct OmniWMClient {
             process.arguments = arguments
             process.standardOutput = pipe
             process.standardError = FileHandle.nullDevice
+            // Output is collected only here; nothing ever blocks waiting for EOF.
             pipe.fileHandleForReading.readabilityHandler = { handle in
                 let chunk = handle.availableData
                 if chunk.isEmpty {
                     handle.readabilityHandler = nil
+                    // EOF: everything is buffered. If the tool is still running, termination or the timeout finishes.
+                    if !process.isRunning {
+                        run.finish()
+                    }
                 } else {
                     run.append(chunk)
                 }
             }
             process.terminationHandler = { _ in
-                // Let the readability handler drain what is left, then finish with what we have.
-                pipe.fileHandleForReading.readabilityHandler = nil
-                let rest = (try? pipe.fileHandleForReading.readToEnd()) ?? nil
-                run.finish(extra: rest)
+                // Give a tail chunk a moment to arrive; a child holding the pipe open must not delay us further.
+                DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) {
+                    run.finish()
+                }
             }
             do {
                 try process.run()
@@ -67,15 +72,16 @@ struct OmniWMClient {
             }
             let pid = process.processIdentifier
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                guard process.isRunning else { return }
-                process.terminate()
-                DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
-                    if process.isRunning {
-                        kill(pid, SIGKILL)
+                if process.isRunning {
+                    process.terminate()
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
+                        if process.isRunning {
+                            kill(pid, SIGKILL)
+                        }
                     }
                 }
                 pipe.fileHandleForReading.readabilityHandler = nil
-                run.finish(extra: nil)
+                run.finish()
             }
         }
     }
@@ -97,13 +103,8 @@ private final class ToolRun: @unchecked Sendable {
         lock.withLock { buffer.append(chunk) }
     }
 
-    func finish(extra: Data?) {
-        resume { data in
-            if let extra {
-                data.append(extra)
-            }
-            return data
-        }
+    func finish() {
+        resume { $0 }
     }
 
     func fail() {
