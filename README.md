@@ -62,7 +62,7 @@ brew uninstall --zap --cask omnikeys
 
 ## Build from source
 
-You need Xcode 16 or later, [mise](https://mise.jdx.dev) and Homebrew.
+You need Xcode 26 or later, [mise](https://mise.jdx.dev) and Homebrew.
 
 ```sh
 make bootstrap     # install tools, generate the project
