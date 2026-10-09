@@ -43,13 +43,28 @@ public enum GroupBuilder {
     }
 
     public static func build(hotkeys: [OmniWMHotkey], config: Config) -> [ShortcutGroup] {
+        var grouped: [String: [ShortcutRow]] = [:]
+        for bucket in buckets(hotkeys, hide: config.hide) {
+            grouped[ActionCatalog.group(for: bucket.base), default: []].append(row(for: bucket, labels: config.labels))
+        }
+        let (mods, key) = Binding.split(config.hotkey)
+        grouped["Tools", default: []].append(ShortcutRow(
+            keys: (mods + [key]).joined(separator: " "),
+            action: "This cheat sheet"
+        ))
+        return ActionCatalog.groupOrder.compactMap { title in
+            grouped[title].map { ShortcutGroup(title: title, rows: shiftVariantsBelowPlain($0)) }
+        }
+    }
+
+    private static func buckets(_ hotkeys: [OmniWMHotkey], hide: [String]) -> [Bucket] {
         var buckets: [Bucket] = []
         for hotkey in hotkeys {
             let (mods, key) = Binding.split(hotkey.binding)
             let parts = hotkey.id.split(separator: ".", maxSplits: 1).map(String.init)
             let base = parts.first ?? hotkey.id
             let suffix = parts.count > 1 ? parts[1] : ""
-            if config.hide.contains(hotkey.id) || config.hide.contains(base) {
+            if hide.contains(hotkey.id) || hide.contains(base) {
                 continue
             }
             let item = Item(suffix: suffix, key: key, id: hotkey.id)
@@ -62,19 +77,23 @@ public enum GroupBuilder {
                 buckets.append(Bucket(base: base, mods: mods, items: [item]))
             }
         }
+        return buckets
+    }
 
-        var grouped: [String: [ShortcutRow]] = [:]
-        for bucket in buckets {
-            grouped[ActionCatalog.group(for: bucket.base), default: []].append(row(for: bucket, labels: config.labels))
+    /// The Shortcuts tab's rows: every row the sheet could show, ignoring `hide` and `labels`, in sheet order.
+    public static func settingsEntries(hotkeys: [OmniWMHotkey]) -> [ShortcutEntry] {
+        let entries = buckets(hotkeys, hide: []).map { bucket in
+            let row = row(for: bucket, labels: [:])
+            let isSeries = bucket.items.count > 1
+            return ShortcutEntry(
+                actionID: isSeries ? bucket.base : bucket.items[0].id,
+                base: bucket.base,
+                group: ActionCatalog.group(for: bucket.base),
+                name: isSeries ? ActionCatalog.names[bucket.base] ?? ActionCatalog.humanize(bucket.base) : row.action,
+                keys: row.keys
+            )
         }
-        let (mods, key) = Binding.split(config.hotkey)
-        grouped["Tools", default: []].append(ShortcutRow(
-            keys: (mods + [key]).joined(separator: " "),
-            action: "This cheat sheet"
-        ))
-        return ActionCatalog.groupOrder.compactMap { title in
-            grouped[title].map { ShortcutGroup(title: title, rows: shiftVariantsBelowPlain($0)) }
-        }
+        return ActionCatalog.groupOrder.flatMap { group in entries.filter { $0.group == group } }
     }
 
     /// True when focus.<x> and move.<x> differ only by ⇧, so the header can say "add ⇧ to move".

@@ -45,4 +45,17 @@ struct HotkeyParserTests {
             #expect(HotkeyParser.supportedKeys.contains(key), "\(key)")
         }
     }
+
+    @Test func invalidHotkeyIssueNamesSetting() {
+        #expect(HotkeyParser.resolve("Slash", hyper: "Control+Option+Command").issue?.key == "hotkey")
+    }
+
+    @Test func hotkeyFieldsSplitAndJoin() {
+        let fields = HotkeyFields("Shift+Hyper+K")
+        #expect(fields.modifiers == ["Hyper", "Shift"])
+        #expect(fields.key == "K")
+        #expect(fields.binding == "Hyper+Shift+K")
+        #expect(HotkeyFields(modifiers: ["Command", "Control", "Option"], key: "Slash").binding
+            == "Control+Option+Command+Slash")
+    }
 }

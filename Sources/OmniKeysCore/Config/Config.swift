@@ -65,9 +65,12 @@ public struct Config: Equatable, Sendable {
 /// A problem with the user's files, shown in the menu and logged instead of failing silently.
 public struct ConfigIssue: Equatable, Sendable, CustomStringConvertible {
     public let message: String
+    /// The config.toml setting it is about, so the Settings window can show it next to that control.
+    public let key: String?
 
-    public init(_ message: String) {
+    public init(_ message: String, key: String? = nil) {
         self.message = message
+        self.key = key
     }
 
     public var description: String {

@@ -46,8 +46,34 @@ public enum HotkeyParser {
         }
         let issue = ConfigIssue(
             "Hotkey “\(binding)” is not valid, so \(Config.defaultHotkey) is used. "
-                + "Use at least one modifier (Hyper, Control, Option, Shift, Command) plus a key such as Slash or K."
+                + "Use at least one modifier (Hyper, Control, Option, Shift, Command) plus a key such as Slash or K.",
+            key: "hotkey"
         )
         return (parse(Config.defaultHotkey, hyper: hyper) ?? .fallback, issue)
+    }
+}
+
+/// The hotkey as the Settings window edits it: modifier names plus one key, in OmniWM spelling.
+public struct HotkeyFields: Equatable, Sendable {
+    /// Order they are written in and shown in.
+    public static let modifierNames = ["Hyper", "Control", "Option", "Shift", "Command"]
+
+    public var modifiers: Set<String>
+    public var key: String
+
+    public init(modifiers: Set<String>, key: String) {
+        self.modifiers = modifiers
+        self.key = key
+    }
+
+    /// "Hyper+Shift+K" -> ["Hyper", "Shift"] + "K". Unknown modifier names are dropped.
+    public init(_ binding: String) {
+        var parts = binding.components(separatedBy: "+")
+        key = parts.popLast() ?? ""
+        modifiers = Set(parts.filter(Self.modifierNames.contains))
+    }
+
+    public var binding: String {
+        (Self.modifierNames.filter(modifiers.contains) + [key]).joined(separator: "+")
     }
 }

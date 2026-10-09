@@ -53,4 +53,22 @@ struct LoadedStateTests {
         #expect(state.issues.count == 1)
         #expect(state.model.groups.last?.rows.last == ShortcutRow(keys: "Hyper /", action: "This cheat sheet"))
     }
+
+    @Test func carriesShortcutEntriesAndSettingsIssue() {
+        let ok = LoadedState.make(
+            configText: nil,
+            settingsText: .success("[[hotkeys]]\nid = \"toggleOverview\"\nbinding = \"Hyper+O\"\n"),
+            settingsPath: "/x"
+        ) { $0 }
+        #expect(ok.shortcuts.map(\.actionID) == ["toggleOverview"])
+        #expect(ok.settingsIssue == nil)
+
+        let missing = LoadedState.make(
+            configText: nil,
+            settingsText: .failure(.missing(path: "/x")),
+            settingsPath: "/x"
+        ) { $0 }
+        #expect(missing.shortcuts.isEmpty)
+        #expect(missing.settingsIssue?.message == "OmniWM settings not found at /x.")
+    }
 }

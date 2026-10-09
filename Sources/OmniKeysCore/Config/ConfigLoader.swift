@@ -197,7 +197,7 @@ private struct ConfigReader {
             } else if let nested = try? table.table(forKey: key) {
                 collect(nested, prefix: id + ".", into: &result)
             } else {
-                issues.append(ConfigIssue("Label for “\(id)” should be text in quotes."))
+                issues.append(ConfigIssue("Label for “\(id)” should be text in quotes.", key: "labels"))
             }
         }
     }
@@ -214,7 +214,7 @@ private struct ConfigReader {
     }
 
     private mutating func report(_ key: String, _ problem: String) {
-        issues.append(ConfigIssue("“\(key)” \(problem)."))
+        issues.append(ConfigIssue("“\(key)” \(problem).", key: key))
     }
 
     private func format(_ value: Double) -> String {

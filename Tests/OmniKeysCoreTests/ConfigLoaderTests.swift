@@ -141,4 +141,9 @@ struct ConfigLoaderTests {
         #expect(AccentSetting("#FF00") == nil)
         #expect(AccentSetting("FF0000") == nil)
     }
+
+    @Test func issuesNameTheirSetting() {
+        let (_, issues) = ConfigLoader.load("textSize = 9\n[labels]\nfocus = 3\n")
+        #expect(issues.map(\.key) == ["textSize", "labels"])
+    }
 }
