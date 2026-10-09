@@ -7,6 +7,7 @@ struct AppearanceTab: View {
     var body: some View {
         @Bindable var model = model
         Form {
+            GeneralIssuesSection()
             Section {
                 Picker("Theme", selection: model.binding(\.theme)) {
                     Text("Dark").tag(Theme.dark)
@@ -35,6 +36,7 @@ struct AppearanceTab: View {
             } footer: {
                 IssueFooter(issues: ["theme", "backgroundOpacity"].flatMap(model.issues(for:)))
             }
+            .disabled(!model.isEditable)
             Section {
                 Picker("Accent colour", selection: $model.accentIsCustom) {
                     Text("System").tag(false)
@@ -49,6 +51,7 @@ struct AppearanceTab: View {
                     help: "Used for section headings and the ✦ Hyper key cap."
                 )
             }
+            .disabled(!model.isEditable)
         }
         .formStyle(.grouped)
         .frame(width: 520, height: 320)

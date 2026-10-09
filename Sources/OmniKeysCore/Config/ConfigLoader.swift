@@ -9,12 +9,18 @@ public enum ConfigLoader {
         "hide", "labels",
     ]
 
+    /// The key of the syntax-error issue: the whole file was ignored, so the Settings window must not write it.
+    public static let syntaxErrorKey = "config.toml"
+
     public static func load(_ text: String) -> (config: Config, issues: [ConfigIssue]) {
         let table: TOMLTable
         do {
             table = try TOMLTable(source: text)
         } catch {
-            return (Config(), [ConfigIssue("config.toml has a syntax error, so all defaults are used: \(error)")])
+            return (Config(), [ConfigIssue(
+                "config.toml has a syntax error, so all defaults are used: \(error)",
+                key: syntaxErrorKey
+            )])
         }
         var reader = ConfigReader(table: table)
         var config = Config()

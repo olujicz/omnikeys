@@ -19,6 +19,9 @@ final class SettingsModel {
     /// Writes the change from the first config (on disk) to the second.
     @ObservationIgnored var save: @MainActor (Config, Config) -> Void = { _, _ in }
     @ObservationIgnored var setLaunchAtLogin: @MainActor (Bool) -> Void = { _ in }
+    /// The colour panel changes the colour continuously; it is saved once it has rested this long.
+    @ObservationIgnored var accentDebounce = Duration.milliseconds(300)
+    @ObservationIgnored private var pendingCommit: Task<Void, Never>?
 
     private static let defaultCustomWidth = 0.75
 
@@ -31,8 +34,15 @@ final class SettingsModel {
         self.launchAtLogin = launchAtLogin
     }
 
+    /// False when config.toml has a syntax error: the form shows defaults, and saving them would overwrite the file.
+    var isEditable: Bool {
+        !issues.contains { $0.key == ConfigLoader.syntaxErrorKey }
+    }
+
     func commit() {
-        guard config != saved else { return }
+        pendingCommit?.cancel()
+        pendingCommit = nil
+        guard isEditable, config != saved else { return }
         let old = saved
         saved = config
         save(old, config)
@@ -44,7 +54,7 @@ final class SettingsModel {
 
     /// Problems not tied to one setting, such as a syntax error or missing OmniWM settings.
     var generalIssues: [ConfigIssue] {
-        issues.filter { $0.key == nil }
+        issues.filter { $0.key == nil || $0.key == ConfigLoader.syntaxErrorKey }
     }
 
     // MARK: - Plain values
@@ -90,6 +100,7 @@ final class SettingsModel {
             return false
         }
         set {
+            guard newValue != widthIsCustom else { return }
             config.width = newValue ? .fraction(Self.defaultCustomWidth) : .auto
             commit()
         }
@@ -118,6 +129,7 @@ final class SettingsModel {
     var accentIsCustom: Bool {
         get { config.accent != .system }
         set {
+            guard newValue != accentIsCustom else { return }
             config.accent = newValue ? AccentSetting("#4C8DFF") ?? .system : .system
             commit()
         }
@@ -140,7 +152,17 @@ final class SettingsModel {
                 green: channel(rgb.greenComponent),
                 blue: channel(rgb.blueComponent)
             )
-            commit()
+            scheduleCommit()
+        }
+    }
+
+    /// Commits after `accentDebounce` unless another change (or a commit) comes first.
+    private func scheduleCommit() {
+        pendingCommit?.cancel()
+        pendingCommit = Task { [weak self, accentDebounce] in
+            try? await Task.sleep(for: accentDebounce)
+            guard !Task.isCancelled else { return }
+            self?.commit()
         }
     }
 
@@ -201,7 +223,8 @@ final class SettingsModel {
         }
     }
 
-    /// Draft: the text field commits on Return or when it loses focus. Empty removes the override.
+    /// Draft: the text field commits on Return, when it loses focus, or when the window closes or changes tab.
+    /// Empty removes the override.
     func label(_ entry: ShortcutEntry) -> SwiftUI.Binding<String> {
         SwiftUI.Binding {
             self.config.labels[entry.actionID] ?? ""

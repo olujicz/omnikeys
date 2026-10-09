@@ -100,6 +100,9 @@ final class AppController {
     func openSettings() {
         let controller = settingsWindow ?? SettingsWindowController(model: settingsModel)
         settingsWindow = controller
+        controller.commitEdits() // keeps drafts when the window is already open; update() replaces them
+        // Launch at login can change in System Settings, which doesn't tell us.
+        settingsModel.update(state: state, launchAtLogin: LoginItem.status)
         controller.show()
     }
 
@@ -109,7 +112,7 @@ final class AppController {
             try store.save { ConfigValues.apply(from: old, to: new, in: $0) }
         } catch {
             Logger.app.error("Could not save settings: \(error.localizedDescription, privacy: .public)")
-            showError("Could not save settings: \(error.localizedDescription)")
+            showError("Could not save settings: \(error.localizedDescription)", on: settingsWindow?.sheetHost)
         }
         reload() // on failure this puts the form back to what the file says
     }
@@ -247,11 +250,17 @@ final class AppController {
         alert.runModal()
     }
 
-    private func showError(_ message: String) {
+    /// Shows the alert as a sheet on `window` when given, otherwise as a modal alert in front of other apps.
+    private func showError(_ message: String, on window: NSWindow? = nil) {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "OmniKeys"
         alert.informativeText = message
-        alert.runModal()
+        if let window {
+            alert.beginSheetModal(for: window)
+        } else {
+            NSApp.activate()
+            alert.runModal()
+        }
     }
 }

@@ -133,6 +133,7 @@ struct ConfigLoaderTests {
         #expect(config == Config())
         #expect(issues.count == 1)
         #expect(issues[0].message.contains("Line 2"))
+        #expect(issues[0].key == ConfigLoader.syntaxErrorKey)
     }
 
     @Test func accentParsesHexAndSystem() {

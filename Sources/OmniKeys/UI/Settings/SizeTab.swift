@@ -7,6 +7,7 @@ struct SizeTab: View {
     var body: some View {
         @Bindable var model = model
         Form {
+            GeneralIssuesSection()
             Section {
                 Picker("Width", selection: $model.widthIsCustom) {
                     Text("Automatic").tag(false)
@@ -28,6 +29,7 @@ struct SizeTab: View {
                         + "Content taller than the maximum height is scaled down to fit."
                 )
             }
+            .disabled(!model.isEditable)
             Section {
                 percentSlider(
                     "Text size",
@@ -64,6 +66,7 @@ struct SizeTab: View {
                         + "27\" 4K at “looks like 1440p” ≈ 109, MacBook Pro built-in ≈ 127. Lower it for bigger text."
                 )
             }
+            .disabled(!model.isEditable)
             Section {
                 Picker("Columns", selection: model.binding(\.columns)) {
                     Text("Automatic").tag(0)
@@ -75,6 +78,7 @@ struct SizeTab: View {
                     help: "Automatic uses 2 on narrow screens, 3 otherwise."
                 )
             }
+            .disabled(!model.isEditable)
         }
         .formStyle(.grouped)
         .frame(width: 520, height: 520)

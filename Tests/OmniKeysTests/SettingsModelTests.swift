@@ -75,11 +75,63 @@ struct SettingsModelTests {
         #expect(model.config.width == .auto)
     }
 
+    @Test func reselectingCustomWidthKeepsTheValue() {
+        model.widthIsCustom = true
+        model.widthFraction.wrappedValue = 0.5
+        model.commit()
+        model.widthIsCustom = true
+        #expect(model.config.width == .fraction(0.5))
+        #expect(recorder.calls.count == 2)
+    }
+
     @Test func accentColorIsStoredAsSRGBHex() throws {
         model.accentColor = Color(.sRGB, red: 76 / 255, green: 141 / 255, blue: 1)
         #expect(try model.config.accent == #require(AccentSetting("#4C8DFF")))
         model.accentIsCustom = false
         #expect(model.config.accent == .system)
+    }
+
+    @Test func reselectingCustomAccentKeepsTheColour() throws {
+        var config = Config()
+        config.accent = try #require(AccentSetting("#112233"))
+        load(config)
+        model.accentIsCustom = true
+        #expect(try model.config.accent == #require(AccentSetting("#112233")))
+        #expect(recorder.calls.isEmpty)
+    }
+
+    @Test func accentColorSavesOnceAfterADebounce() async throws {
+        model.accentColor = Color(.sRGB, red: 1, green: 0, blue: 0)
+        model.accentColor = Color(.sRGB, red: 0, green: 0, blue: 1)
+        #expect(recorder.calls.isEmpty)
+        try await Task.sleep(for: .milliseconds(600))
+        let blue = try #require(AccentSetting("#0000FF"))
+        #expect(recorder.calls.count == 1)
+        #expect(recorder.calls.first?.new.accent == blue)
+    }
+
+    @Test func commitFlushesAPendingAccentColour() async throws {
+        model.accentColor = Color(.sRGB, red: 1, green: 0, blue: 0)
+        model.commit()
+        #expect(recorder.calls.count == 1)
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(recorder.calls.count == 1)
+    }
+
+    @Test func syntaxErrorMakesTheFormReadOnly() {
+        let issue = ConfigIssue("config.toml has a syntax error", key: ConfigLoader.syntaxErrorKey)
+        load(Config(), issues: [issue])
+        #expect(model.isEditable == false)
+        #expect(model.generalIssues == [issue])
+        model.binding(\.closeOnClickOutside).wrappedValue = false
+        model.widthIsCustom = true
+        model.commit()
+        #expect(recorder.calls.isEmpty)
+    }
+
+    @Test func otherIssuesKeepTheFormEditable() {
+        load(Config(), issues: [ConfigIssue("bad", key: "textSize"), ConfigIssue("general")])
+        #expect(model.isEditable)
     }
 
     @Test func showingARowHiddenByBase() {

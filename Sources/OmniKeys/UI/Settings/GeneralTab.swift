@@ -6,14 +6,7 @@ struct GeneralTab: View {
 
     var body: some View {
         Form {
-            if !model.generalIssues.isEmpty {
-                Section {
-                    ForEach(model.generalIssues, id: \.message) { issue in
-                        Label(issue.message, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
+            GeneralIssuesSection()
             Section {
                 LabeledContent("Modifiers") {
                     HStack {
@@ -37,14 +30,19 @@ struct GeneralTab: View {
                     help: "Opens and closes the cheat sheet. Hyper is the set of modifiers OmniWM's Hyper key sends."
                 )
             }
+            .disabled(!model.isEditable)
             Section {
-                Picker("Open on", selection: model.binding(\.screen)) {
-                    Text("Screen with the focused window").tag(ScreenChoice.focused)
-                    Text("Screen under the pointer").tag(ScreenChoice.mouse)
-                    Text("Main screen").tag(ScreenChoice.main)
+                Group {
+                    Picker("Open on", selection: model.binding(\.screen)) {
+                        Text("Screen with the focused window").tag(ScreenChoice.focused)
+                        Text("Screen under the pointer").tag(ScreenChoice.mouse)
+                        Text("Main screen").tag(ScreenChoice.main)
+                    }
+                    Toggle("Close when clicking outside", isOn: model.binding(\.closeOnClickOutside))
+                    Toggle("Show menu-bar icon", isOn: model.binding(\.showMenuBarIcon))
                 }
-                Toggle("Close when clicking outside", isOn: model.binding(\.closeOnClickOutside))
-                Toggle("Show menu-bar icon", isOn: model.binding(\.showMenuBarIcon))
+                .disabled(!model.isEditable)
+                // Launch at login is not stored in config.toml, so it stays usable.
                 Toggle("Launch at login", isOn: model.launchAtLoginEnabled)
             } footer: {
                 IssueFooter(

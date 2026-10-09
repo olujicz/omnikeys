@@ -7,6 +7,7 @@ struct ShortcutsTab: View {
 
     var body: some View {
         Form {
+            GeneralIssuesSection(excluding: model.settingsIssue)
             Section {
                 Toggle("Show Workspaces card", isOn: model.binding(\.showWorkspaces))
                 Toggle("Show “Always floating” apps", isOn: model.binding(\.showFloating))
@@ -18,6 +19,7 @@ struct ShortcutsTab: View {
                         + "leave the field empty to keep the default name."
                 )
             }
+            .disabled(!model.isEditable)
             if let issue = model.settingsIssue {
                 Section {
                     Label(issue.message, systemImage: "exclamationmark.triangle")
@@ -30,6 +32,7 @@ struct ShortcutsTab: View {
                             row(entry)
                         }
                     }
+                    .disabled(!model.isEditable)
                 }
             }
         }
