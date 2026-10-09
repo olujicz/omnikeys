@@ -12,6 +12,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 - ⌘, opens Settings instead of the settings file. Open Settings File… is still in the menu.
+- New app icon and menu-bar icon: the ✦ Hyper key cap. On macOS 26 and later the app icon follows the
+  Dark, Clear and Tinted icon styles.
 
 ## [0.1.0] - 2026-10-08
 

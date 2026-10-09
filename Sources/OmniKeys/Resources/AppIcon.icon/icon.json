@@ -1,0 +1,38 @@
+{
+  "fill" : {
+    "automatic-gradient" : "extended-srgb:0.23137,0.27451,0.86275,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "image-name" : "Hyper.svg",
+          "name" : "Hyper"
+        }
+      ],
+      "name" : "Hyper",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.34999999999999998
+      }
+    },
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "image-name" : "Key cap.svg",
+          "name" : "Key cap"
+        }
+      ],
+      "name" : "Key cap",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.59999999999999998
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
+}

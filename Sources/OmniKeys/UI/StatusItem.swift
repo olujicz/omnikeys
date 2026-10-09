@@ -18,6 +18,13 @@ final class StatusItem {
     private let actions: Actions
     private var item: NSStatusItem?
 
+    /// The ✦ key cap from the asset catalog; a template image, so macOS colours it for the menu bar.
+    static var icon: NSImage? {
+        let image = NSImage(named: "MenuBarIcon")
+        image?.accessibilityDescription = "OmniKeys"
+        return image
+    }
+
     init(actions: Actions) {
         self.actions = actions
     }
@@ -31,7 +38,7 @@ final class StatusItem {
             return
         }
         let item = item ?? NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "OmniKeys")
+        item.button?.image = Self.icon
         item.menu = Self.makeMenu(hotkey: hotkey, issues: issues, launchAtLogin: LoginItem.status, actions: actions)
         self.item = item
     }

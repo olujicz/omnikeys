@@ -1,60 +1,124 @@
 #!/usr/bin/env swift
-// Draws the app icon at every macOS size into the asset catalog. Run from the repo root:
+// Writes the app icon (an Icon Composer document) and the menu-bar icon. Run from the repo root:
 //   swift scripts/make-icon.swift
+// AppIcon.icon can also be opened and tweaked in Icon Composer (Xcode › Open Developer Tool).
 import AppKit
 
-let catalog = URL(fileURLWithPath: "Sources/OmniKeys/Resources/Assets.xcassets")
-let iconSet = catalog.appendingPathComponent("AppIcon.appiconset")
-try FileManager.default.createDirectory(at: iconSet, withIntermediateDirectories: true)
+let resources = URL(fileURLWithPath: "Sources/OmniKeys/Resources")
+let fileManager = FileManager.default
 
-func png(size: Int) throws -> Data {
-    let side = CGFloat(size)
-    guard let rep = NSBitmapImageRep(
-        bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size, bitsPerSample: 8, samplesPerPixel: 4,
-        hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
-    ) else { throw CocoaError(.fileWriteUnknown) }
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-    // macOS icon grid: an 824/1024 rounded square, centred.
-    let inset = side * 100 / 1024
-    let body = NSRect(x: inset, y: inset, width: side - 2 * inset, height: side - 2 * inset)
-    let bodyPath = NSBezierPath(roundedRect: body, xRadius: side * 185 / 1024, yRadius: side * 185 / 1024)
-    NSGradient(
-        starting: NSColor(calibratedRed: 0.17, green: 0.19, blue: 0.25, alpha: 1),
-        ending: NSColor(calibratedRed: 0.06, green: 0.07, blue: 0.10, alpha: 1)
-    )?.draw(in: bodyPath, angle: -90)
-    // One accent key cap with the ✦ Hyper mark.
-    let cap = body.insetBy(dx: body.width * 0.21, dy: body.height * 0.21)
-    let capPath = NSBezierPath(roundedRect: cap, xRadius: cap.width * 0.17, yRadius: cap.width * 0.17)
-    NSColor(calibratedRed: 0.30, green: 0.55, blue: 1.0, alpha: 1).setFill()
-    capPath.fill()
-    let glyph = "✦" as NSString
-    let attributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.systemFont(ofSize: cap.height * 0.56, weight: .bold),
-        .foregroundColor: NSColor.white,
-    ]
-    let glyphSize = glyph.size(withAttributes: attributes)
-    glyph.draw(
-        at: NSPoint(x: cap.midX - glyphSize.width / 2, y: cap.midY - glyphSize.height / 2),
-        withAttributes: attributes
-    )
-    NSGraphicsContext.restoreGraphicsState()
-    guard let data = rep.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
-    return data
-}
+// MARK: - App icon: Icon Composer document
 
-var images: [[String: String]] = []
-for points in [16, 32, 128, 256, 512] {
-    for scale in [1, 2] {
-        let name = "icon_\(points)x\(points)\(scale == 2 ? "@2x" : "").png"
-        try png(size: points * scale).write(to: iconSet.appendingPathComponent(name))
-        images.append(["idiom": "mac", "size": "\(points)x\(points)", "scale": "\(scale)x", "filename": name])
+// Layers are flat shapes on the full 1024-point canvas; macOS adds the glass, lighting and depth, and derives the
+// Dark, Clear and Tinted appearances. Xcode renders plain PNGs from it for macOS 14–25.
+
+/// The ✦ Hyper mark: a four-point star with curved sides, centred on (cx, cy).
+func starPath(cx: Double, cy: Double, radius r: Double) -> String {
+    let k = r * 0.2 // how far the curves pull towards the centre
+    func p(_ x: Double, _ y: Double) -> String {
+        String(format: "%.1f,%.1f", cx + x, cy + y)
     }
+    return "M\(p(0, -r)) C\(p(k, -k)) \(p(k, -k)) \(p(r, 0)) C\(p(k, k)) \(p(k, k)) \(p(0, r)) "
+        + "C\(p(-k, k)) \(p(-k, k)) \(p(-r, 0)) C\(p(-k, -k)) \(p(-k, -k)) \(p(0, -r)) Z"
 }
 
-let info = ["author": "xcode", "version": 1] as [String: Any]
-try JSONSerialization.data(withJSONObject: ["images": images, "info": info], options: [.prettyPrinted, .sortedKeys])
-    .write(to: iconSet.appendingPathComponent("Contents.json"))
-try JSONSerialization.data(withJSONObject: ["info": info], options: [.prettyPrinted, .sortedKeys])
-    .write(to: catalog.appendingPathComponent("Contents.json"))
-print("Wrote \(images.count) icon sizes to \(iconSet.path)")
+func svg(_ body: String) -> String {
+    """
+    <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+    \(body)
+    </svg>
+
+    """
+}
+
+func capRect(x: Double, y: Double, side: Double, fill: String) -> String {
+    let radius = side * 0.22
+    return "<rect x=\"\(x)\" y=\"\(y)\" width=\"\(side)\" height=\"\(side)\" rx=\"\(radius)\" fill=\"\(fill)\"/>"
+}
+
+let mainCap = 600.0
+let layers: [(name: String, svg: String)] = [
+    ("Hyper", svg("<path d=\"\(starPath(cx: 512, cy: 512, radius: 205))\" fill=\"#3B6FF5\"/>")),
+    ("Key cap", svg(capRect(x: 512 - mainCap / 2, y: 512 - mainCap / 2, side: mainCap, fill: "#FFFFFF"))),
+]
+
+let iconURL = resources.appendingPathComponent("AppIcon.icon")
+let assetsURL = iconURL.appendingPathComponent("Assets")
+try? fileManager.removeItem(at: iconURL)
+try fileManager.createDirectory(at: assetsURL, withIntermediateDirectories: true)
+for layer in layers {
+    try layer.svg.write(to: assetsURL.appendingPathComponent("\(layer.name).svg"), atomically: true, encoding: .utf8)
+}
+
+/// One group per layer so each gets its own depth; listed top first.
+let groups: [[String: Any]] = [
+    [
+        "name": "Hyper",
+        "layers": [["name": "Hyper", "image-name": "Hyper.svg", "glass": false]],
+        "shadow": ["kind": "layer-color", "opacity": 0.35],
+    ],
+    [
+        "name": "Key cap",
+        "layers": [["name": "Key cap", "image-name": "Key cap.svg", "glass": true]],
+        "shadow": ["kind": "neutral", "opacity": 0.6],
+    ],
+]
+let document: [String: Any] = [
+    "fill": ["automatic-gradient": "extended-srgb:0.23137,0.27451,0.86275,1.00000"],
+    "groups": groups,
+    "supported-platforms": ["squares": "shared"],
+]
+try JSONSerialization.data(withJSONObject: document, options: [.prettyPrinted, .sortedKeys])
+    .write(to: iconURL.appendingPathComponent("icon.json"))
+print("Wrote \(iconURL.path)")
+
+// MARK: - Menu-bar icon: template PDF
+
+// An 18-point key cap outline with a solid ✦; a template image, so macOS colours it for the menu bar.
+let catalog = resources.appendingPathComponent("Assets.xcassets")
+let imageSet = catalog.appendingPathComponent("MenuBarIcon.imageset")
+try fileManager.createDirectory(at: imageSet, withIntermediateDirectories: true)
+
+func menuBarPDF() throws -> Data {
+    let side = 18.0
+    let data = NSMutableData()
+    var box = CGRect(x: 0, y: 0, width: side, height: side)
+    guard let consumer = CGDataConsumer(data: data as CFMutableData),
+          let context = CGContext(consumer: consumer, mediaBox: &box, nil)
+    else { throw CocoaError(.fileWriteUnknown) }
+    context.beginPDFPage(nil)
+    context.setFillColor(NSColor.black.cgColor)
+    context.setStrokeColor(NSColor.black.cgColor)
+    let line = 1.5
+    let cap = CGRect(x: 1.5, y: 1.5, width: side - 3, height: side - 3)
+    context.setLineWidth(line)
+    context.addPath(CGPath(roundedRect: cap, cornerWidth: 4, cornerHeight: 4, transform: nil))
+    context.strokePath()
+    let star = NSBezierPath()
+    let (cx, cy, r) = (side / 2, side / 2, 4.6)
+    let k = r * 0.2
+    star.move(to: NSPoint(x: cx, y: cy + r))
+    for (end, control) in [
+        (NSPoint(x: cx + r, y: cy), NSPoint(x: cx + k, y: cy + k)),
+        (NSPoint(x: cx, y: cy - r), NSPoint(x: cx + k, y: cy - k)),
+        (NSPoint(x: cx - r, y: cy), NSPoint(x: cx - k, y: cy - k)),
+        (NSPoint(x: cx, y: cy + r), NSPoint(x: cx - k, y: cy + k)),
+    ] {
+        star.curve(to: end, controlPoint1: control, controlPoint2: control)
+    }
+    context.addPath(star.cgPath)
+    context.fillPath()
+    context.endPDFPage()
+    context.closePDF()
+    return data as Data
+}
+
+try menuBarPDF().write(to: imageSet.appendingPathComponent("MenuBarIcon.pdf"))
+let imageSetContents: [String: Any] = [
+    "images": [["idiom": "universal", "filename": "MenuBarIcon.pdf"]],
+    "info": ["author": "xcode", "version": 1],
+    "properties": ["template-rendering-intent": "template", "preserves-vector-representation": true],
+]
+try JSONSerialization.data(withJSONObject: imageSetContents, options: [.prettyPrinted, .sortedKeys])
+    .write(to: imageSet.appendingPathComponent("Contents.json"))
+print("Wrote \(imageSet.path)")

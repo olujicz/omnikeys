@@ -63,4 +63,11 @@ struct StatusItemTests {
         menu.performActionForItem(at: menu.index(of: show))
         #expect(fired.value == 1)
     }
+
+    @Test func menuBarIconIsATemplateImage() throws {
+        let icon = try #require(StatusItem.icon)
+        #expect(icon.isTemplate)
+        #expect(icon.size == NSSize(width: 18, height: 18))
+        #expect(icon.accessibilityDescription == "OmniKeys")
+    }
 }
