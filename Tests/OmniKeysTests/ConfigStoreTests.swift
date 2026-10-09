@@ -91,4 +91,39 @@ struct ConfigStoreTests {
         #expect(issues
             .contains { $0.message.hasPrefix("OmniWM settings at") && $0.message.contains("could not be read") })
     }
+
+    @Test func saveRewritesThroughEdit() throws {
+        let store = ConfigStore(paths: paths)
+        _ = store.prepare()
+        try store.save { ConfigEditor.setting("textSize", to: .number(1.5), in: $0) }
+        let text = try String(contentsOf: paths.configFile, encoding: .utf8)
+        #expect(store.load().config.textSize == 1.5)
+        #expect(text.contains("# Text size multiplier"))
+    }
+
+    /// Review focus 2.
+    @Test func saveRecreatesDeletedFile() throws {
+        let store = ConfigStore(paths: paths)
+        try store.save { ConfigEditor.setting("theme", to: .string("light"), in: $0) }
+        let text = try String(contentsOf: paths.configFile, encoding: .utf8)
+        #expect(text.contains("# Colour theme"))
+        #expect(store.load().config.theme == .light)
+    }
+
+    /// Review focus 1.
+    @Test func saveKeepsSymlink() throws {
+        let fileManager = FileManager.default
+        let target = try makeTemporaryDirectory().appendingPathComponent("dotfiles-config.toml")
+        try "theme = \"dark\"\n".write(to: target, atomically: true, encoding: .utf8)
+        try fileManager.createDirectory(
+            at: paths.configFile.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try fileManager.createSymbolicLink(at: paths.configFile, withDestinationURL: target)
+
+        try ConfigStore(paths: paths).save { ConfigEditor.setting("theme", to: .string("light"), in: $0) }
+
+        #expect(try fileManager.destinationOfSymbolicLink(atPath: paths.configFile.path) == target.path)
+        #expect(try String(contentsOf: target, encoding: .utf8) == "theme = \"light\"\n")
+    }
 }

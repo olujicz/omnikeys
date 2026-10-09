@@ -6,7 +6,8 @@ import Testing
 @MainActor
 struct StatusItemTests {
     let actions = StatusItem.Actions(
-        show: {}, openSettings: {}, exportShortcuts: {}, importShortcuts: {}, toggleLaunchAtLogin: {}, about: {}, quit: {}
+        show: {}, openSettings: {}, openSettingsFile: {}, exportShortcuts: {}, importShortcuts: {},
+        toggleLaunchAtLogin: {}, about: {}, quit: {}
     )
 
     @Test func menuListsActions() {
@@ -14,6 +15,7 @@ struct StatusItemTests {
         let titles = menu.items.filter { !$0.isSeparatorItem }.map(\.title)
         #expect(titles == [
             "Show Cheat Sheet (Hyper /)",
+            "Settings…",
             "Open Settings File…",
             "Export Shortcuts…",
             "Import Shortcuts…",
@@ -21,6 +23,8 @@ struct StatusItemTests {
             "About OmniKeys",
             "Quit OmniKeys",
         ])
+        #expect(menu.items.first { $0.title == "Settings…" }?.keyEquivalent == ",")
+        #expect(menu.items.first { $0.title == "Open Settings File…" }?.keyEquivalent == "")
         #expect(menu.items.first { $0.title == "Launch at Login" }?.state == .off)
     }
 
@@ -49,7 +53,7 @@ struct StatusItemTests {
         let fired = Counter()
         let actions = StatusItem.Actions(
             show: { fired.value += 1 },
-            openSettings: {}, exportShortcuts: {}, importShortcuts: {},
+            openSettings: {}, openSettingsFile: {}, exportShortcuts: {}, importShortcuts: {},
             toggleLaunchAtLogin: {},
             about: {},
             quit: {}

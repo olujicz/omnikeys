@@ -54,6 +54,15 @@ struct ConfigStore {
         }
     }
 
+    /// Rewrites config.toml through `edit`, recreating it first if it was deleted. Writes to the symlink's
+    /// target, so a config.toml linked from a dotfiles repo stays a link.
+    func save(_ edit: (String) -> String) throws {
+        _ = prepare()
+        let url = paths.configFile.resolvingSymlinksInPath()
+        let text = try String(contentsOf: url, encoding: .utf8)
+        try edit(text).write(to: url, atomically: true, encoding: .utf8)
+    }
+
     /// Reads both files. A missing config.toml means defaults; a missing settings.toml becomes an issue.
     func load(configFile: URL? = nil, settingsFile: URL? = nil) -> LoadedState {
         let configURL = configFile ?? paths.configFile

@@ -7,6 +7,7 @@ final class StatusItem {
     struct Actions {
         var show: @MainActor () -> Void
         var openSettings: @MainActor () -> Void
+        var openSettingsFile: @MainActor () -> Void
         var exportShortcuts: @MainActor () -> Void
         var importShortcuts: @MainActor () -> Void
         var toggleLaunchAtLogin: @MainActor () -> Void
@@ -50,7 +51,8 @@ final class StatusItem {
             }
             menu.addItem(.separator())
         }
-        menu.addItem(ActionMenuItem("Open Settings File…", key: ",", handler: actions.openSettings))
+        menu.addItem(ActionMenuItem("Settings…", key: ",", handler: actions.openSettings))
+        menu.addItem(ActionMenuItem("Open Settings File…", handler: actions.openSettingsFile))
         menu.addItem(ActionMenuItem("Export Shortcuts…", handler: actions.exportShortcuts))
         menu.addItem(ActionMenuItem("Import Shortcuts…", handler: actions.importShortcuts))
         let loginTitle = launchAtLogin == .requiresApproval ? "Launch at Login (approve in System Settings)" : "Launch at Login"
@@ -61,26 +63,5 @@ final class StatusItem {
         menu.addItem(ActionMenuItem("About OmniKeys", handler: actions.about))
         menu.addItem(ActionMenuItem("Quit OmniKeys", key: "q", handler: actions.quit))
         return menu
-    }
-}
-
-/// NSMenuItem that runs a closure.
-@MainActor
-private final class ActionMenuItem: NSMenuItem {
-    private let handler: @MainActor () -> Void
-
-    init(_ title: String, key: String = "", handler: @escaping @MainActor () -> Void) {
-        self.handler = handler
-        super.init(title: title, action: #selector(fire), keyEquivalent: key)
-        target = self
-    }
-
-    @available(*, unavailable)
-    required init(coder _: NSCoder) {
-        fatalError("init(coder:) is not supported")
-    }
-
-    @objc private func fire() {
-        handler()
     }
 }

@@ -1,8 +1,8 @@
 import AppKit
 import Carbon.HIToolbox
 import OmniKeysCore
-import UniformTypeIdentifiers
 import os
+import UniformTypeIdentifiers
 
 /// Owns the app's moving parts and keeps them in sync with config.toml and OmniWM's settings.toml.
 @MainActor
@@ -12,6 +12,8 @@ final class AppController {
     private let hotKey = HotKey()
     private let presenter = PanelPresenter()
     private let omniWM = OmniWMClient()
+    private let settingsModel = SettingsModel()
+    private var settingsWindow: SettingsWindowController?
     private var pollTimer: Timer?
     private var statusItem: StatusItem?
     private var stamps: [Date?] = []
@@ -33,10 +35,11 @@ final class AppController {
 
     func start() {
         hotKey.onPress = { [weak self] in self?.toggle() }
-        presenter.onOpenSettings = { [weak self] in self?.openSettingsFile() }
+        presenter.onOpenSettings = { [weak self] in self?.openSettings() }
         statusItem = StatusItem(actions: .init(
             show: { [weak self] in self?.showSheet() },
-            openSettings: { [weak self] in self?.openSettingsFile() },
+            openSettings: { [weak self] in self?.openSettings() },
+            openSettingsFile: { [weak self] in self?.openSettingsFile() },
             exportShortcuts: { [weak self] in self?.exportShortcuts() },
             importShortcuts: { [weak self] in self?.importShortcuts() },
             toggleLaunchAtLogin: { [weak self] in self?.toggleLaunchAtLogin() },
@@ -46,6 +49,16 @@ final class AppController {
             },
             quit: { NSApp.terminate(nil) }
         ))
+        settingsModel.save = { [weak self] old, new in self?.saveConfig(from: old, to: new) }
+        settingsModel.setLaunchAtLogin = { [weak self] enabled in self?.setLaunchAtLogin(enabled) }
+        NSApp.mainMenu = MainMenu.make(
+            settings: { [weak self] in self?.openSettings() },
+            about: {
+                NSApp.activate()
+                NSApp.orderFrontStandardAboutPanel(nil)
+            },
+            quit: { NSApp.terminate(nil) }
+        )
         reload()
         // Poll both files' modification dates: cheap, and catches atomic saves and deletion.
         pollTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -82,6 +95,23 @@ final class AppController {
         } catch {
             Logger.app.error("Could not open settings: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    func openSettings() {
+        let controller = settingsWindow ?? SettingsWindowController(model: settingsModel)
+        settingsWindow = controller
+        controller.show()
+    }
+
+    /// Saves a Settings-window edit and reloads at once instead of waiting for the poll.
+    private func saveConfig(from old: Config, to new: Config) {
+        do {
+            try store.save { ConfigValues.apply(from: old, to: new, in: $0) }
+        } catch {
+            Logger.app.error("Could not save settings: \(error.localizedDescription, privacy: .public)")
+            showError("Could not save settings: \(error.localizedDescription)")
+        }
+        reload() // on failure this puts the form back to what the file says
     }
 
     func exportShortcuts() {
@@ -128,14 +158,19 @@ final class AppController {
     }
 
     private func toggleLaunchAtLogin() {
+        setLaunchAtLogin(LoginItem.status != .enabled)
+    }
+
+    private func setLaunchAtLogin(_ enabled: Bool) {
         do {
-            try LoginItem.setEnabled(LoginItem.status != .enabled)
+            try LoginItem.setEnabled(enabled)
         } catch {
             Logger.app.error("Launch at login change failed: \(error.localizedDescription, privacy: .public)")
             NSApp.activate()
             NSAlert(error: error).runModal()
         }
         updateStatusItem()
+        settingsModel.update(state: state, launchAtLogin: LoginItem.status)
     }
 
     private func reloadIfChanged() {
@@ -150,6 +185,7 @@ final class AppController {
         loaded.issues = setupIssues + loaded.issues + [hotkeyIssue].compactMap(\.self)
         state = loaded
         stamps = store.fileStamps()
+        settingsModel.update(state: state, launchAtLogin: LoginItem.status)
         updateStatusItem()
         for issue in state.issues {
             Logger.app.warning("\(issue.message, privacy: .public)")
@@ -170,9 +206,10 @@ final class AppController {
             registeredHotkey = nil
             hotkeyIssue = ConfigIssue(
                 status == OSStatus(eventHotKeyExistsErr)
-                    ? "The hotkey is already used by another app. Pick a different “hotkey” in config.toml."
+                    ? "The hotkey is already used by another app. Pick a different hotkey in Settings."
                     : "The hotkey could not be registered (error \(status)); another app may already use it. "
-                    + "Pick a different “hotkey” in config.toml."
+                    + "Pick a different hotkey in Settings.",
+                key: "hotkey"
             )
         }
     }
