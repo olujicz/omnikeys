@@ -28,7 +28,7 @@ launchctl bootout gui/$(id -u)/local.omnikeys; rm ~/Library/LaunchAgents/local.o
 
 Press ✦ Hyper + / to open the sheet. Hyper is the set of modifiers that OmniWM's Hyper key sends.
 
-Esc, the same hotkey, or a click outside the sheet closes it. ⌘, opens the settings file.
+Esc, the same hotkey, or a click outside the sheet closes it. ⌘, opens Settings.
 
 The menu-bar icon offers the same actions, plus Launch at Login. It also lists any problems with your settings.
 
@@ -36,13 +36,15 @@ Use Export Shortcuts… and Import Shortcuts… in the menu-bar menu to transfer
 
 ## Settings
 
-Settings live in `~/.config/omnikeys/config.toml`. OmniKeys creates the file on first launch, with every option documented inline. Changes apply within a second.
+Choose Settings… from the menu-bar icon, or press ⌘, while the sheet is open. Changes apply immediately.
+
+Settings are stored in `~/.config/omnikeys/config.toml`, with every option documented inline. You can also edit the file directly (Open Settings File… in the menu); changes apply within a second, and Settings keeps your comments when it saves.
 
 An older `~/.config/omniwm/omnikeys.toml` is moved there automatically.
 
 ## Troubleshooting
 
-**The hotkey does nothing.** Another app owns it. The menu shows ⚠︎. Pick another `hotkey` in the settings file.
+**The hotkey does nothing.** Another app owns it. The menu shows ⚠︎. Pick another hotkey in Settings.
 
 **"OmniWM settings not found".** Open OmniWM once so it writes its settings.
 

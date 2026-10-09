@@ -6,7 +6,7 @@ public enum DefaultConfig {
     # ─────────────────────────────────────────────────────────────────────────────
     #  • Every option is listed below with its default value.
     #  • Changes apply within a second of saving. No restart needed.
-    #  • Press ⌘, while the sheet is open, or use the menu-bar icon, to edit this file.
+    #  • Settings… (⌘, or the menu-bar icon) edits these options; this file stores them.
     #  • Delete this file to get the defaults back (it is recreated automatically).
     #  • The shortcuts themselves are read from OmniWM's settings.toml, so they are
     #    always current. This file only controls how the sheet looks and behaves.

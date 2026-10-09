@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Settings window (⌘, or Settings… in the menu) for every option, including hiding and renaming shortcuts.
+  It saves to `config.toml` and keeps your comments.
+
+### Changed
+- ⌘, opens Settings instead of the settings file. Open Settings File… is still in the menu.
+
 ## [0.1.0] - 2026-10-08
 
 ### Added
