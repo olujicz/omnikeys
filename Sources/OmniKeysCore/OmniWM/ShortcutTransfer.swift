@@ -75,7 +75,8 @@ public enum ShortcutTransfer {
             guard !hotkey.id.isEmpty, !hotkey.binding.isEmpty,
                   !hotkey.id.contains("\n"), !hotkey.binding.contains("\n")
             else {
-                throw ShortcutTransferError.invalidDocument("Every shortcut must have a non-empty, single-line id and binding.")
+                throw ShortcutTransferError
+                    .invalidDocument("Every shortcut must have a non-empty, single-line id and binding.")
             }
             guard ids.insert(hotkey.id).inserted else {
                 throw ShortcutTransferError.duplicateAction(hotkey.id)
@@ -94,17 +95,28 @@ public enum ShortcutTransfer {
         }
 
         var lines = settingsText.components(separatedBy: "\n")
-        var blocks: [(id: String, bindingLine: Int)] = []
+        let bindingLines = hotkeyBindingLines(in: lines)
+        for hotkey in document.hotkeys where bindingLines[hotkey.id] == nil {
+            throw ShortcutTransferError.actionNotFound(hotkey.id)
+        }
+        for hotkey in document.hotkeys {
+            guard let lineIndex = bindingLines[hotkey.id] else { continue }
+            lines[lineIndex] = replacingQuotedValue(in: lines[lineIndex], key: "binding", value: hotkey.binding)
+        }
+        setHyperKeyModifiers(document.hyperKeyModifiers, in: &lines)
+        return lines.joined(separator: "\n")
+    }
+
+    /// The line holding `binding = "…"` for each `[[hotkeys]]` block, by action id (first block wins).
+    private static func hotkeyBindingLines(in lines: [String]) -> [String: Int] {
+        var result: [String: Int] = [:]
         var index = 0
         while index < lines.count {
             guard lines[index].trimmingCharacters(in: .whitespaces) == "[[hotkeys]]" else {
                 index += 1
                 continue
             }
-            let end = lines[(index + 1)...].firstIndex {
-                let line = $0.trimmingCharacters(in: .whitespaces)
-                return line.hasPrefix("[")
-            } ?? lines.count
+            let end = sectionEnd(after: index, in: lines)
             var id: String?
             var bindingLine: Int?
             for lineIndex in (index + 1) ..< end {
@@ -115,43 +127,33 @@ public enum ShortcutTransfer {
                     bindingLine = lineIndex
                 }
             }
-            if let id, let bindingLine {
-                blocks.append((id, bindingLine))
+            if let id, let bindingLine, result[id] == nil {
+                result[id] = bindingLine
             }
             index = end
         }
+        return result
+    }
 
-        let blocksByID = Dictionary(blocks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        for hotkey in document.hotkeys where blocksByID[hotkey.id] == nil {
-            throw ShortcutTransferError.actionNotFound(hotkey.id)
+    /// Sets `[general].hyperKeyModifiers`, adding the key or the whole table when missing.
+    private static func setHyperKeyModifiers(_ modifiers: String, in lines: inout [String]) {
+        guard let header = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "[general]" }) else {
+            lines.insert(contentsOf: ["[general]", "hyperKeyModifiers = \(tomlString(modifiers))", ""], at: 0)
+            return
         }
-        for hotkey in document.hotkeys {
-            let lineIndex = blocksByID[hotkey.id]!.bindingLine
-            lines[lineIndex] = replacingQuotedValue(in: lines[lineIndex], key: "binding", value: hotkey.binding)
-        }
-
-        let generalHeader = lines.firstIndex { $0.trimmingCharacters(in: .whitespaces) == "[general]" }
-        if let generalHeader {
-            let end = lines[(generalHeader + 1)...].firstIndex {
-                $0.trimmingCharacters(in: .whitespaces).hasPrefix("[")
-            } ?? lines.count
-            if let modifierLine = (generalHeader + 1 ..< end).first(where: {
-                quotedValue(in: lines[$0], key: "hyperKeyModifiers") != nil
-            }) {
-                lines[modifierLine] = replacingQuotedValue(
-                    in: lines[modifierLine], key: "hyperKeyModifiers", value: document.hyperKeyModifiers
-                )
-            } else {
-                lines.insert("hyperKeyModifiers = \(tomlString(document.hyperKeyModifiers))", at: generalHeader + 1)
-            }
+        let end = sectionEnd(after: header, in: lines)
+        if let line = (header + 1 ..< end)
+            .first(where: { quotedValue(in: lines[$0], key: "hyperKeyModifiers") != nil })
+        {
+            lines[line] = replacingQuotedValue(in: lines[line], key: "hyperKeyModifiers", value: modifiers)
         } else {
-            lines.insert(contentsOf: [
-                "[general]",
-                "hyperKeyModifiers = \(tomlString(document.hyperKeyModifiers))",
-                "",
-            ], at: 0)
+            lines.insert("hyperKeyModifiers = \(tomlString(modifiers))", at: header + 1)
         }
-        return lines.joined(separator: "\n")
+    }
+
+    /// Index of the next table header after `header`, or the end of the file.
+    private static func sectionEnd(after header: Int, in lines: [String]) -> Int {
+        lines[(header + 1)...].firstIndex { $0.trimmingCharacters(in: .whitespaces).hasPrefix("[") } ?? lines.count
     }
 
     private static func quotedValue(in line: String, key: String) -> String? {

@@ -1,5 +1,5 @@
-@testable import OmniKeysCore
 import Foundation
+@testable import OmniKeysCore
 import Testing
 
 struct ShortcutTransferTests {
@@ -25,7 +25,10 @@ struct ShortcutTransferTests {
             try ShortcutTransfer.import(data: unsupported)
         }
 
-        let duplicate = Data("{\"formatVersion\":1,\"hyperKeyModifiers\":\"Control\",\"hotkeys\":[{\"id\":\"x\",\"binding\":\"Hyper+X\"},{\"id\":\"x\",\"binding\":\"Hyper+Y\"}]}".utf8)
+        let duplicate = Data("""
+        {"formatVersion":1,"hyperKeyModifiers":"Control","hotkeys":[\
+        {"id":"x","binding":"Hyper+X"},{"id":"x","binding":"Hyper+Y"}]}
+        """.utf8)
         #expect(throws: ShortcutTransferError.duplicateAction("x")) {
             try ShortcutTransfer.import(data: duplicate)
         }
