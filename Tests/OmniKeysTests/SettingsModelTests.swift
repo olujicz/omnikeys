@@ -1,0 +1,125 @@
+import AppKit
+@testable import OmniKeys
+import OmniKeysCore
+import SwiftUI
+import Testing
+
+@MainActor
+final class SaveRecorder {
+    var calls: [(old: Config, new: Config)] = []
+}
+
+@MainActor
+struct SettingsModelTests {
+    let model = SettingsModel()
+    let recorder = SaveRecorder()
+
+    init() {
+        load(Config())
+        model.save = { [recorder] in recorder.calls.append(($0, $1)) }
+    }
+
+    private func load(_ config: Config, issues: [ConfigIssue] = [], shortcuts: [ShortcutEntry] = []) {
+        let state = LoadedState(
+            config: config,
+            hotkey: .fallback,
+            model: SheetModel(groups: [], workspaces: [], floating: [], hyperGlyphs: "", showShiftHint: false),
+            issues: issues,
+            shortcuts: shortcuts
+        )
+        model.update(state: state, launchAtLogin: .disabled)
+    }
+
+    @Test func togglesSaveImmediately() {
+        model.binding(\.closeOnClickOutside).wrappedValue = false
+        #expect(recorder.calls.count == 1)
+        #expect(recorder.calls.first?.old.closeOnClickOutside == true)
+        #expect(recorder.calls.first?.new.closeOnClickOutside == false)
+    }
+
+    @Test func commitWithoutChangesDoesNothing() {
+        model.commit()
+        #expect(recorder.calls.isEmpty)
+    }
+
+    @Test func slidersDraftUntilCommitted() {
+        model.number(\.textSize, in: 0.5 ... 3, step: 0.05, draft: true).wrappedValue = 1.234
+        #expect(model.config.textSize == 1.25)
+        #expect(recorder.calls.isEmpty)
+        model.commit()
+        #expect(recorder.calls.count == 1)
+    }
+
+    @Test func numbersAreClamped() {
+        model.number(\.referenceDensity, in: 40 ... 300, step: 1).wrappedValue = 500
+        #expect(model.config.referenceDensity == 300)
+    }
+
+    @Test func hotkeyKeepsAtLeastOneModifier() {
+        #expect(model.isOnlyModifier("Hyper"))
+        model.modifier("Hyper").wrappedValue = false
+        #expect(model.config.hotkey == "Hyper+Slash")
+        #expect(recorder.calls.isEmpty)
+        model.modifier("Shift").wrappedValue = true
+        #expect(model.config.hotkey == "Hyper+Shift+Slash")
+        model.hotkeyKey.wrappedValue = "K"
+        #expect(model.config.hotkey == "Hyper+Shift+K")
+    }
+
+    @Test func widthChoice() {
+        model.widthIsCustom = true
+        #expect(model.config.width == .fraction(0.75))
+        model.widthFraction.wrappedValue = 0.512
+        #expect(model.config.width == .fraction(0.51))
+        model.widthIsCustom = false
+        #expect(model.config.width == .auto)
+    }
+
+    @Test func accentColorIsStoredAsSRGBHex() throws {
+        model.accentColor = Color(.sRGB, red: 76 / 255, green: 141 / 255, blue: 1)
+        #expect(try model.config.accent == #require(AccentSetting("#4C8DFF")))
+        model.accentIsCustom = false
+        #expect(model.config.accent == .system)
+    }
+
+    @Test func showingARowHiddenByBase() {
+        let entry = ShortcutEntry(
+            actionID: "switchWorkspace.next",
+            base: "switchWorkspace",
+            group: "",
+            name: "",
+            keys: ""
+        )
+        var config = Config()
+        config.hide = ["switchWorkspace"]
+        load(config, shortcuts: [entry])
+        #expect(model.isVisible(entry).wrappedValue == false)
+        model.isVisible(entry).wrappedValue = true
+        #expect(model.config.hide.isEmpty)
+        #expect(recorder.calls.count == 1)
+    }
+
+    @Test func emptyLabelRemovesOverride() {
+        let entry = ShortcutEntry(actionID: "focus", base: "focus", group: "", name: "Focus window", keys: "")
+        model.label(entry).wrappedValue = "Go"
+        #expect(model.config.labels == ["focus": "Go"])
+        #expect(recorder.calls.isEmpty) // labels save on commit
+        model.label(entry).wrappedValue = "  "
+        #expect(model.config.labels.isEmpty)
+    }
+
+    @Test func updateReplacesDraftAndSplitsIssues() {
+        model.number(\.textSize, in: 0.5 ... 3, step: 0.05, draft: true).wrappedValue = 2
+        load(Config(), issues: [ConfigIssue("bad", key: "textSize"), ConfigIssue("general")])
+        #expect(model.config.textSize == 1)
+        #expect(model.issues(for: "textSize").map(\.message) == ["bad"])
+        #expect(model.generalIssues.map(\.message) == ["general"])
+    }
+
+    @Test func groupsShortcutsInSheetOrder() {
+        let a = ShortcutEntry(actionID: "toggleOverview", base: "toggleOverview", group: "Tools", name: "", keys: "")
+        let b = ShortcutEntry(actionID: "focus", base: "focus", group: "Navigate", name: "", keys: "")
+        load(Config(), shortcuts: [b, a])
+        #expect(model.shortcutGroups.map(\.title) == ["Navigate", "Tools"])
+    }
+}
