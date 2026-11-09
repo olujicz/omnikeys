@@ -9,6 +9,8 @@ All notable changes to this project are documented here. The format follows
 ### Added
 - Settings window (⌘, or Settings… in the menu) for every option, including hiding and renaming shortcuts.
   It saves to `config.toml` and keeps your comments.
+- OmniWM 0.8 support: names for the renamed resize actions, command palette modes, volume, media and
+  keyboard-mode actions, and the window switcher's ⌘⇥ / ⌥⇥ shortcuts when it is enabled.
 
 ### Changed
 - ⌘, opens Settings instead of the settings file. Open Settings File… is still in the menu.

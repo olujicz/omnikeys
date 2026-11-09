@@ -23,7 +23,7 @@ public struct SheetModel: Equatable, Sendable {
     public static func make(config: Config, settings: OmniWMSettings) -> SheetModel {
         let workspaces = config.showWorkspaces ? settings.workspaces.filter { !$0.apps.isEmpty } : []
         return SheetModel(
-            groups: GroupBuilder.build(hotkeys: settings.hotkeys, config: config),
+            groups: GroupBuilder.build(hotkeys: settings.hotkeys + settings.switcherHotkeys, config: config),
             workspaces: workspaces,
             floating: config.showFloating && !workspaces.isEmpty ? settings.floating : [],
             hyperGlyphs: Binding.modifierGlyphs(settings.hyperModifiers),

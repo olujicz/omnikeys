@@ -38,6 +38,27 @@ struct OmniWMSettingsTests {
         #expect(settings.hotkeys == [OmniWMHotkey(id: "toggleScratchpad.1", binding: "Hyper+S")])
     }
 
+    @Test func windowSwitcherShortcutsFollowItsSettings() throws {
+        let settings = try OmniWMSettings.parse("""
+        [windowSwitcher]
+        enabled = true
+        commandTab = "remembered"
+        optionTab = "disabled"
+        """, appName: { $0 })
+        #expect(settings.switcherHotkeys == [OmniWMHotkey(id: "windowSwitcher.remembered", binding: "Command+Tab")])
+        #expect(settings.hotkeys.isEmpty)
+    }
+
+    @Test func windowSwitcherDefaultsAndDisabled() throws {
+        let enabled = try OmniWMSettings.parse("[windowSwitcher]\nenabled = true", appName: { $0 })
+        #expect(enabled.switcherHotkeys == [
+            OmniWMHotkey(id: "windowSwitcher.activeWorkspace", binding: "Command+Tab"),
+            OmniWMHotkey(id: "windowSwitcher.allWorkspaces", binding: "Option+Tab"),
+        ])
+        let disabled = try OmniWMSettings.parse("[windowSwitcher]\ncommandTab = \"allWorkspaces\"", appName: { $0 })
+        #expect(disabled.switcherHotkeys.isEmpty)
+    }
+
     @Test func emptyFileGivesDefaults() throws {
         #expect(try OmniWMSettings.parse("", appName: { $0 }) == OmniWMSettings())
     }

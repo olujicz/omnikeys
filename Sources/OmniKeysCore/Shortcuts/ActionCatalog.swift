@@ -32,6 +32,21 @@ public enum ActionCatalog {
         "setContainerPrimarySpan.increase10Percent": "Column wider",
         "setWindowSecondarySpan.decrease10Percent": "Window shorter",
         "setWindowSecondarySpan.increase10Percent": "Window taller",
+        // OmniWM 0.8 renamed the resize actions.
+        "resizeContainerPrimarySpan.shrink": "Column narrower", "resizeContainerPrimarySpan.grow": "Column wider",
+        "resizeWindowPrimarySpan.shrink": "Window narrower", "resizeWindowPrimarySpan.grow": "Window wider",
+        "resizeWindowSecondarySpan.shrink": "Window shorter", "resizeWindowSecondarySpan.grow": "Window taller",
+        "openCommandPalette.windows": "Palette: windows", "openCommandPalette.menu": "Palette: app menu",
+        "openCommandPalette.clipboard": "Palette: clipboard", "openCommandPalette.commands": "Palette: commands",
+        "openCommandPalette.applications": "Palette: launcher", "openCommandPalette.files": "Palette: files",
+        "volumeUp": "Volume up", "volumeDown": "Volume down", "volumeMute": "Mute",
+        "mediaPlayPause": "Play / pause", "mediaNext": "Next track", "mediaPrevious": "Previous track",
+        "toggleShortcutPause": "Pause shortcuts", "beginPrefix": "Prefix mode",
+        "toggleWindowMode": "Window mode", "exitKeyboardMode": "Exit keyboard mode",
+        // Not OmniWM hotkeys: synthesized from [windowSwitcher] by OmniWMSettings.
+        "windowSwitcher.activeWorkspace": "Window switcher: this workspace",
+        "windowSwitcher.allWorkspaces": "Window switcher: all workspaces",
+        "windowSwitcher.remembered": "Window switcher: last scope",
     ]
 
     public static let groupOrder = ["Navigate", "Workspaces & monitors", "Columns & sizing", "Windows", "Tools"]

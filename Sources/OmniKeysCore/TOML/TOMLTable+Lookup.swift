@@ -6,6 +6,10 @@ extension TOMLTable {
         contains(key: key) ? try? string(forKey: key) : nil
     }
 
+    func optionalBool(_ key: String) -> Bool? {
+        contains(key: key) ? try? bool(forKey: key) : nil
+    }
+
     func optionalTable(_ key: String) -> TOMLTable? {
         contains(key: key) ? try? table(forKey: key) : nil
     }

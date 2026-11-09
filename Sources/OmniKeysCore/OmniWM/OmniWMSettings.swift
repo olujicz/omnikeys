@@ -30,6 +30,8 @@ public struct OmniWMSettings: Equatable, Sendable {
     public static let defaultHyperModifiers = "Control+Option+Command"
 
     public var hotkeys: [OmniWMHotkey]
+    /// ⌘Tab / ⌥Tab of OmniWM's window switcher. Kept apart from `hotkeys` so Export never writes them as hotkeys.
+    public var switcherHotkeys: [OmniWMHotkey] = []
     public var workspaces: [OmniWMWorkspace]
     public var floating: [String]
     public var hyperModifiers: String
@@ -58,6 +60,9 @@ public struct OmniWMSettings: Equatable, Sendable {
                   binding != "Unassigned" else { return nil }
             return OmniWMHotkey(id: id, binding: binding)
         }
+        if let switcher = root.optionalTable("windowSwitcher") {
+            settings.switcherHotkeys = switcherHotkeys(switcher)
+        }
         settings.workspaces = root.tables("workspaces").map(workspace)
         for rule in root.tables("appRules") {
             guard let bundleID = rule.optionalString("bundleId") else { continue }
@@ -74,6 +79,18 @@ public struct OmniWMSettings: Equatable, Sendable {
             }
         }
         return settings
+    }
+
+    /// Defaults match OmniWM: off; ⌘Tab = active workspace, ⌥Tab = all workspaces.
+    private static func switcherHotkeys(_ table: TOMLTable) -> [OmniWMHotkey] {
+        guard table.optionalBool("enabled") == true else { return [] }
+        let shortcuts = [
+            ("Command+Tab", table.optionalString("commandTab") ?? "activeWorkspace"),
+            ("Option+Tab", table.optionalString("optionTab") ?? "allWorkspaces"),
+        ]
+        return shortcuts.compactMap { binding, scope in
+            scope == "disabled" ? nil : OmniWMHotkey(id: "windowSwitcher.\(scope)", binding: binding)
+        }
     }
 
     private static func workspace(_ table: TOMLTable) -> OmniWMWorkspace {

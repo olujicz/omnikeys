@@ -81,7 +81,7 @@ public struct LoadedState: Equatable, Sendable {
             hotkey: resolved.spec,
             model: SheetModel.make(config: config, settings: settings),
             issues: issues,
-            shortcuts: GroupBuilder.settingsEntries(hotkeys: settings.hotkeys),
+            shortcuts: GroupBuilder.settingsEntries(hotkeys: settings.hotkeys + settings.switcherHotkeys),
             settingsIssue: settingsIssue
         )
     }

@@ -84,6 +84,22 @@ struct GroupBuilderTests {
         #expect(rows(groups, "Tools").first == "Hyper ` | Drop-down")
     }
 
+    @Test func namesOmniWM08Actions() {
+        let groups = GroupBuilder.build(
+            hotkeys: hotkeys([
+                ("resizeContainerPrimarySpan.shrink", "Hyper+Minus"),
+                ("openCommandPalette.applications", "Hyper+A"),
+                ("windowSwitcher.activeWorkspace", "Command+Tab"),
+            ]),
+            config: Config()
+        )
+        #expect(rows(groups, "Columns & sizing") == ["Hyper − | Column narrower"])
+        #expect(rows(groups, "Tools").prefix(2) == [
+            "Hyper A | Palette: launcher",
+            "⌘ ⇥ | Window switcher: this workspace",
+        ])
+    }
+
     @Test func unknownActionIsHumanizedIntoTools() {
         let groups = GroupBuilder.build(hotkeys: hotkeys([("doSomethingCool", "Hyper+D")]), config: Config())
         #expect(rows(groups, "Tools").first == "Hyper D | Do something cool")
