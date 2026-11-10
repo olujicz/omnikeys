@@ -33,12 +33,40 @@ struct PanelSizingTests {
     @Test func fitAccountsForRewrapping() {
         // Constant area: narrower layout -> taller content. Height = 500 * scale².
         let fit = PanelSizing.fit(width: 1000, maxHeight: 250, initialScale: 1) { layoutWidth in 500_000 / layoutWidth }
-        #expect(fit.scale == 0.5)
-        #expect(fit.height == 125)
+        #expect(abs(fit.scale - 0.5.squareRoot()) < 0.001)
+        #expect(fit.height <= 250)
+        #expect(fit.height > 240)
+    }
+
+    @Test func fitNeverGrowsPastInitialScale() {
+        let fit = PanelSizing.fit(width: 1000, maxHeight: 2000, initialScale: 1.5) { _ in 500 }
+        #expect(fit.scale == 1.5)
+        #expect(fit.height == 750)
     }
 
     @Test func fitNeverExceedsMaxHeight() {
         let fit = PanelSizing.fit(width: 1000, maxHeight: 300, initialScale: 1) { _ in 1_000_000_000 }
         #expect(fit.height == 300)
+    }
+
+    @Test func bestFitPicksColumnCountWithBiggestText() {
+        // Area-constant content: more columns make it shorter, until columns get too narrow.
+        let heights = [2: 1600.0, 3: 1200, 4: 1300]
+        let fit = PanelSizing.bestFit(width: 1000, maxHeight: 600, initialScale: 1, columnCounts: [
+            2,
+            3,
+            4,
+        ]) { _, columns in
+            heights[columns] ?? 0
+        }
+        #expect(fit.columns == 3)
+        #expect(fit.scale == 0.5)
+    }
+
+    @Test func bestFitPrefersFewerColumnsOnATie() {
+        let fit = PanelSizing
+            .bestFit(width: 1000, maxHeight: 2000, initialScale: 1, columnCounts: [2, 3, 4]) { _, _ in 500 }
+        #expect(fit.columns == 2)
+        #expect(fit.scale == 1)
     }
 }

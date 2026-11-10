@@ -43,7 +43,7 @@ struct LoadedStateTests {
         #expect(state.issues[0].message.hasPrefix("OmniWM settings at /s could not be read"))
     }
 
-    @Test func invalidHotkeyFallsBackAndSheetShowsDefault() {
+    @Test func invalidHotkeyFallsBackAndSheetShowsDefault() throws {
         let state = LoadedState.make(
             configText: "hotkey = \"Slash\"",
             settingsText: .success(settingsText),
@@ -51,7 +51,10 @@ struct LoadedStateTests {
         ) { $0 }
         #expect(state.config.hotkey == Config.defaultHotkey)
         #expect(state.issues.count == 1)
-        #expect(state.model.groups.last?.rows.last == ShortcutRow(keys: "Hyper /", action: "This cheat sheet"))
+        let last = try #require(state.model.groups.last?.rows.last)
+        #expect(last.keys == "Hyper /")
+        #expect(last.action == "This cheat sheet")
+        #expect(last.actionID == ActionCatalog.cheatSheetID)
     }
 
     @Test func carriesShortcutEntriesAndSettingsIssue() {

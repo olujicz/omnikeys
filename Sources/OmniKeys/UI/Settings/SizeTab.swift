@@ -75,7 +75,7 @@ struct SizeTab: View {
             } footer: {
                 IssueFooter(
                     issues: model.issues(for: "columns"),
-                    help: "Automatic uses 2 on narrow screens, 3 otherwise."
+                    help: "Automatic picks 2, 3 or 4, whichever gives the biggest text."
                 )
             }
             .disabled(!model.isEditable)

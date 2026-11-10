@@ -6,23 +6,31 @@ struct WorkspacesCard: View {
     let floating: [String]
 
     var body: some View {
-        Card(title: "Workspaces") {
-            Grid(alignment: .leading, horizontalSpacing: 22, verticalSpacing: 7) {
+        Card(title: "Workspaces", symbol: "square.grid.3x2") {
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
                 ForEach(Array(workspaces.enumerated()), id: \.offset) { _, workspace in
                     GridRow(alignment: .firstTextBaseline) {
-                        let label = workspace.displayName.isEmpty
-                            ? workspace.name
-                            : "\(workspace.name) \(workspace.displayName)"
-                        KeyChips(text: label)
-                        Text(workspace.display).font(.system(size: 15)).foregroundStyle(.secondary)
-                        Text(workspace.apps.joined(separator: ", ")).font(.system(size: 15))
+                        KeyCap(label: workspace.name)
+                        Text(workspace.displayName).font(.system(size: 15))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(workspace.apps.joined(separator: ", "))
+                                .font(.system(size: 15))
+                                .fixedSize(horizontal: false, vertical: true)
+                            if !workspace.display.isEmpty {
+                                Text(workspace.display)
+                                    .font(.system(size: 12.5))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
             if !floating.isEmpty {
-                Text("Always floating: " + floating.joined(separator: ", "))
-                    .font(.system(size: 13.5))
-                    .foregroundStyle(.secondary)
+                (Text("Always floating  ").foregroundStyle(.secondary) + Text(floating.joined(separator: ", ")))
+                    .font(.system(size: 13))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
             }
         }
     }

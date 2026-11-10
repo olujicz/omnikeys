@@ -23,7 +23,7 @@ struct SettingsModelTests {
         let state = LoadedState(
             config: config,
             hotkey: .fallback,
-            model: SheetModel(groups: [], workspaces: [], floating: [], hyperGlyphs: "", showShiftHint: false),
+            model: SheetModel(groups: [], workspaces: [], floating: [], hyperGlyphs: ""),
             issues: issues,
             shortcuts: shortcuts
         )

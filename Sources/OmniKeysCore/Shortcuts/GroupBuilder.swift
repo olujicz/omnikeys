@@ -1,15 +1,55 @@
 import Foundation
 
 public struct ShortcutRow: Identifiable, Equatable, Sendable {
-    public let keys: String
+    /// Modifier caps, as shown: ["Hyper", "⇧"].
+    public let modifiers: [String]
+    /// The key cap, or a series of keys: "R", "H/J/K/L", "1–6".
+    public let key: String
+    /// What the sheet calls the action (a user label wins).
     public let action: String
+    /// The OmniWM action id, or the shared base of a collapsed series ("focus" for focus.left…right).
+    public let actionID: String
+
     public var id: String {
         "\(keys)|\(action)"
     }
 
-    public init(keys: String, action: String) {
-        self.keys = keys
+    /// "Hyper ⇧ R"
+    public var keys: String {
+        (modifiers + [key]).joined(separator: " ")
+    }
+
+    public init(modifiers: [String], key: String, action: String, actionID: String) {
+        self.modifiers = modifiers
+        self.key = key
         self.action = action
+        self.actionID = actionID
+    }
+
+    /// Splits "Hyper ⇧ R" into modifiers and key.
+    public init(keys: String, action: String, actionID: String = "") {
+        let tokens = Self.tokens(keys)
+        self.init(modifiers: tokens.dropLast(), key: tokens.last ?? "", action: action, actionID: actionID)
+    }
+
+    /// The keys without ⇧: "Hyper ⇧ R" -> "Hyper R".
+    var plainKeys: String {
+        (modifiers.filter { $0 != "⇧" } + [key]).joined(separator: " ")
+    }
+
+    /// "openCommandPalette" for "openCommandPalette.windows".
+    var base: String {
+        String(actionID.prefix { $0 != "." })
+    }
+
+    /// "windows" for "openCommandPalette.windows"; nil without a dot.
+    var member: String? {
+        actionID.firstIndex(of: ".").map { String(actionID[actionID.index(after: $0)...]) }
+    }
+
+    /// "Hyper ⇧ R" -> ["Hyper", "⇧", "R"].
+    public static func tokens(_ keys: String) -> [String] {
+        keys.split(separator: " ").map(String.init)
     }
 }
 
@@ -48,9 +88,11 @@ public enum GroupBuilder {
             grouped[ActionCatalog.group(for: bucket.base), default: []].append(row(for: bucket, labels: config.labels))
         }
         let (mods, key) = Binding.split(config.hotkey)
-        grouped["Tools", default: []].append(ShortcutRow(
-            keys: (mods + [key]).joined(separator: " "),
-            action: "This cheat sheet"
+        grouped[ActionCatalog.Group.tools, default: []].append(ShortcutRow(
+            modifiers: mods,
+            key: key,
+            action: "This cheat sheet",
+            actionID: ActionCatalog.cheatSheetID
         ))
         return ActionCatalog.groupOrder.compactMap { title in
             grouped[title].map { ShortcutGroup(title: title, rows: shiftVariantsBelowPlain($0)) }
@@ -77,7 +119,13 @@ public enum GroupBuilder {
                 buckets.append(Bucket(base: base, mods: mods, items: [item]))
             }
         }
-        return buckets
+        // Stable sort: known bases by priority, then everything else in OmniWM's order.
+        let rank = { (bucket: Bucket) in
+            ActionCatalog.priority.firstIndex(of: bucket.base) ?? ActionCatalog.priority.count
+        }
+        return buckets.enumerated()
+            .sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }
+            .map(\.element)
     }
 
     /// The Shortcuts tab's rows: every row the sheet could show, ignoring `hide` and `labels`, in sheet order.
@@ -96,29 +144,16 @@ public enum GroupBuilder {
         return ActionCatalog.groupOrder.flatMap { group in entries.filter { $0.group == group } }
     }
 
-    /// True when focus.<x> and move.<x> differ only by ⇧, so the header can say "add ⇧ to move".
-    public static func usesShiftToMove(_ hotkeys: [OmniWMHotkey]) -> Bool {
-        let bindings = Dictionary(hotkeys.map { ($0.id, $0.binding) }, uniquingKeysWith: { first, _ in first })
-        return bindings.contains { id, binding in
-            guard id.hasPrefix("focus."),
-                  let move = bindings["move." + id.dropFirst("focus.".count)] else { return false }
-            let focusKeys = Binding.split(binding)
-            let moveKeys = Binding.split(move)
-            return focusKeys.key == moveKeys.key && Set(moveKeys.mods) == Set(focusKeys.mods).union(["⇧"])
-        }
-    }
-
     private static func row(for bucket: Bucket, labels: [String: String]) -> ShortcutRow {
         func label(_ id: String) -> String? {
             labels[id] ?? ActionCatalog.names[id]
         }
         let first = bucket.items[0]
-        let modText = bucket.mods.joined(separator: " ")
         let baseName = label(bucket.base) ?? ActionCatalog.humanize(bucket.base)
-        let keys: String
+        let key: String
         let action: String
         if bucket.items.count > 1, Int(first.suffix) != nil, let lastKey = bucket.items.last?.key {
-            keys = "\(modText) \(first.key)–\(lastKey)"
+            key = "\(first.key)–\(lastKey)"
             let offset = bucket.items.contains { $0.suffix == "0" } ? 1 : 0
             let numbers = bucket.items.compactMap { Int($0.suffix) }.map { $0 + offset }
             action = "\(baseName) \(numbers.min() ?? 0)–\(numbers.max() ?? 0)"
@@ -126,29 +161,31 @@ public enum GroupBuilder {
             let order = { (item: Item) in directions.firstIndex(of: item.suffix) ?? directions.count }
             let sorted = bucket.items.sorted { order($0) < order($1) }
             let compact = sorted.allSatisfy { $0.key.count == 1 && $0.key.first?.isLetter == true }
-            keys = "\(modText) " + sorted.map(\.key).joined(separator: compact ? "/" : "")
+            key = sorted.map(\.key).joined(separator: compact ? "/" : "")
             action = "\(baseName) " + sorted.map(\.suffix).joined(separator: "/")
         } else {
-            keys = "\(modText) \(first.key)"
+            key = first.key
             action = label(first.id)
                 ?? label(bucket.base).map { first.suffix.isEmpty ? $0 : "\($0) \(first.suffix)" }
                 ?? ActionCatalog.humanize(first.id)
         }
-        return ShortcutRow(keys: keys.trimmingCharacters(in: .whitespaces), action: action)
+        return ShortcutRow(
+            modifiers: bucket.mods,
+            key: key,
+            action: action,
+            actionID: bucket.items.count > 1 ? bucket.base : first.id
+        )
     }
 
     /// Keep each ⇧ variant directly under its plain shortcut (Hyper Tab, then Hyper ⇧ Tab).
     private static func shiftVariantsBelowPlain(_ rows: [ShortcutRow]) -> [ShortcutRow] {
-        func plainKeys(_ row: ShortcutRow) -> String {
-            row.keys.replacingOccurrences(of: "⇧ ", with: "")
-        }
         var firstSeen: [String: Int] = [:]
-        for (index, row) in rows.enumerated() where firstSeen[plainKeys(row)] == nil {
-            firstSeen[plainKeys(row)] = index
+        for (index, row) in rows.enumerated() where firstSeen[row.plainKeys] == nil {
+            firstSeen[row.plainKeys] = index
         }
         func sortKey(_ entry: (offset: Int, element: ShortcutRow)) -> [Int] {
             [
-                firstSeen[plainKeys(entry.element)] ?? entry.offset,
+                firstSeen[entry.element.plainKeys] ?? entry.offset,
                 entry.element.keys.contains("⇧") ? 1 : 0,
                 entry.offset,
             ]

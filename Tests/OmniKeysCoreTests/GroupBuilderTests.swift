@@ -125,12 +125,6 @@ struct GroupBuilderTests {
         #expect(groups.map(\.title) == ["Navigate", "Columns & sizing", "Windows", "Tools"])
     }
 
-    @Test func detectsShiftToMoveConvention() {
-        #expect(GroupBuilder.usesShiftToMove(hotkeys([("focus.left", "Hyper+H"), ("move.left", "Hyper+Shift+H")])))
-        #expect(!GroupBuilder.usesShiftToMove(hotkeys([("focus.left", "Hyper+H"), ("move.left", "Control+H")])))
-        #expect(!GroupBuilder.usesShiftToMove(hotkeys([("focus.left", "Hyper+H")])))
-    }
-
     @Test func settingsEntriesUseBaseForSeries() {
         let entries = GroupBuilder.settingsEntries(hotkeys: hotkeys([
             ("switchWorkspace.0", "Hyper+1"),

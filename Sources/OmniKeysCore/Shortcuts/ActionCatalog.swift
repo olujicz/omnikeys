@@ -49,7 +49,34 @@ public enum ActionCatalog {
         "windowSwitcher.remembered": "Window switcher: last scope",
     ]
 
-    public static let groupOrder = ["Navigate", "Workspaces & monitors", "Columns & sizing", "Windows", "Tools"]
+    /// The sheet's own row, which is not an OmniWM action.
+    public static let cheatSheetID = "omnikeys.cheatSheet"
+
+    /// Bases whose dotted actions share one line: "Palette ✦ +" then W windows, X commands, …
+    static let families = ["openCommandPalette": "Palette", "windowSwitcher": "Window switcher"]
+
+    /// Opposite actions that share one line when only their key differs.
+    static let pairs = [
+        (next: "switchWorkspace.next", previous: "switchWorkspace.previous", name: "Next / previous workspace"),
+        (next: "focusMonitorNext", previous: "focusMonitorPrevious", name: "Next / previous monitor"),
+    ]
+
+    /// Bases listed first within their group, most used first; others follow in OmniWM's order.
+    static let priority = [
+        "openCommandPalette", "windowSwitcher", "toggleOverview", "openMenuAnywhere",
+        "toggleHiddenBarPanel", "toggleQuakeTerminal", "toggleWorkspaceLayout",
+    ]
+
+    /// Group titles, which also identify the groups.
+    public enum Group {
+        public static let navigate = "Navigate"
+        public static let workspaces = "Workspaces & monitors"
+        public static let columns = "Columns & sizing"
+        public static let windows = "Windows"
+        public static let tools = "Tools"
+    }
+
+    public static let groupOrder = [Group.navigate, Group.workspaces, Group.columns, Group.windows, Group.tools]
 
     private static let navigation: Set<String> = [
         "focus", "move", "focusPrevious", "focusColumnFirst", "focusColumnLast", "focusColumn", "focusWindowInColumn",
@@ -58,23 +85,23 @@ public enum ActionCatalog {
 
     public static func group(for base: String) -> String {
         if navigation.contains(base) {
-            return "Navigate"
+            return Group.navigate
         }
         if base == "toggleWorkspaceLayout" {
-            return "Tools"
+            return Group.tools
         }
         if base.lowercased().contains("workspace") || base.contains("Monitor") {
-            return "Workspaces & monitors"
+            return Group.workspaces
         }
         if base.contains("Span") || base.contains("Size") || base.contains("Fullscreen")
             || base == "centerColumn" || base == "toggleColumnTabbed"
         {
-            return "Columns & sizing"
+            return Group.columns
         }
         if base.contains("Float") || base.contains("Scratchpad") || base == "closeFocusedWindow" {
-            return "Windows"
+            return Group.windows
         }
-        return "Tools"
+        return Group.tools
     }
 
     /// "switchWorkspace.next" -> "Switch workspace next"

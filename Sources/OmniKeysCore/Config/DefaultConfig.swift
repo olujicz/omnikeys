@@ -71,8 +71,8 @@ public enum DefaultConfig {
     # Default: 85
     referenceDensity = 85
 
-    # Number of card columns. 0 = automatic (2 on narrow screens, 3 otherwise),
-    # or a fixed 1, 2, 3 or 4.
+    # Number of card columns. 0 = automatic (2, 3 or 4, whichever gives the
+    # biggest text), or a fixed 1, 2, 3 or 4.
     # Default: 0
     columns = 0
 

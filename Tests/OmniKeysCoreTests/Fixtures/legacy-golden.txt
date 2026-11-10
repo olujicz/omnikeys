@@ -44,11 +44,11 @@ Hyper ⇧ F	Focus floating ⇄ tiled
 Hyper Q	Close window
 ## Tools
 Hyper Space	Command palette
+Hyper O	Overview
 Hyper N	App menu anywhere
 Hyper I	Hidden menu-bar icons
 Hyper `	Quake terminal
 Hyper E	Switch layout niri ⇄ dwindle
-Hyper O	Overview
 Hyper /	This cheat sheet
 ## Workspaces
 1	Code	Built-in Retina Display	Editor,Terminal

@@ -1,19 +1,39 @@
 public enum ColumnLayout {
-    /// 0 means automatic: 2 columns when the layout is narrower than 1150 points, otherwise 3.
-    public static func columnCount(configured: Int, layoutWidth: Double) -> Int {
-        configured > 0 ? configured : (layoutWidth < 1150 ? 2 : 3)
+    /// Column counts to try: the configured one, or 2–4 when automatic (0).
+    public static func candidates(configured: Int) -> [Int] {
+        configured > 0 ? [configured] : [2, 3, 4]
     }
 
-    /// Spreads cards over columns, always adding to the shortest one (rows + 2 for the card heading).
-    public static func distribute(_ groups: [ShortcutGroup], columns: Int) -> [[ShortcutGroup]] {
-        let count = max(columns, 1)
-        var result = Array(repeating: [ShortcutGroup](), count: count)
-        var heights = Array(repeating: 0, count: count)
-        for group in groups {
-            let shortest = heights.indices.min { heights[$0] < heights[$1] } ?? 0
-            result[shortest].append(group)
-            heights[shortest] += group.rows.count + 2
+    /// Splits items into `min(columns, items.count)` non-empty consecutive runs, keeping their order
+    /// (read top to bottom, then left to right) and making the tallest column as short as possible.
+    public static func flow<Item>(_ items: [Item], columns: Int, weight: (Item) -> Double) -> [[Item]] {
+        guard !items.isEmpty else { return [] }
+        // total[i]: summed weight of the first i items, so a run's weight is total[end] - total[start].
+        let total = items.reduce(into: [0.0]) { $0.append($0[$0.count - 1] + weight($1)) }
+        let count = min(max(columns, 1), items.count)
+        // best[k][i]: smallest tallest-column height for the first i items in k columns, and where the last starts.
+        var best = Array(
+            repeating: Array(repeating: (height: Double.infinity, start: 0), count: items.count + 1),
+            count: count + 1
+        )
+        best[0][0] = (0, 0)
+        for column in 1 ... count {
+            for end in column ... items.count {
+                for start in column - 1 ..< end where best[column - 1][start].height < .infinity {
+                    let height = max(best[column - 1][start].height, total[end] - total[start])
+                    if height < best[column][end].height {
+                        best[column][end] = (height, start)
+                    }
+                }
+            }
         }
-        return result
+        var result: [[Item]] = []
+        var end = items.count
+        for column in stride(from: count, to: 0, by: -1) {
+            let start = best[column][end].start
+            result.append(Array(items[start ..< end]))
+            end = start
+        }
+        return result.reversed()
     }
 }

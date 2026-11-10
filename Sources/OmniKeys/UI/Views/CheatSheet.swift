@@ -2,53 +2,91 @@ import AppKit
 import OmniKeysCore
 import SwiftUI
 
+/// One card on the sheet.
+enum SheetCard: Identifiable {
+    case shortcuts(title: String, entries: [SheetEntry])
+    case workspaces
+
+    var id: String {
+        switch self {
+        case let .shortcuts(title, _): "shortcuts-\(title)"
+        case .workspaces: "workspaces"
+        }
+    }
+
+    /// Cards in reading order; the workspace list follows the workspace shortcuts.
+    static func cards(for model: SheetModel) -> [SheetCard] {
+        var cards = model.groups.map { SheetCard.shortcuts(title: $0.title, entries: SheetEntry.make($0.rows)) }
+        if !model.workspaces.isEmpty {
+            let after = model.groups.firstIndex { $0.title == ActionCatalog.Group.workspaces }
+            cards.insert(.workspaces, at: after.map { $0 + 1 } ?? cards.endIndex)
+        }
+        return cards
+    }
+}
+
 struct CheatSheet: View {
+    /// Spacing, shared with SheetLayout, which adds up measured card heights the same way.
+    enum Metrics {
+        static let padding = 22.0
+        static let headerSpacing = 14.0
+        static let columnSpacing = 12.0
+        static let cardSpacing = 12.0
+
+        static func columnWidth(layoutWidth: Double, columns: Int) -> Double {
+            (layoutWidth - 2 * padding - columnSpacing * Double(columns - 1)) / Double(columns)
+        }
+    }
+
     let model: SheetModel
     let width: Double
+    let columns: [[SheetCard]]
     @Environment(\.omniKeysConfig) private var config
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text("OmniWM").font(.system(size: 26, weight: .bold))
-                Text(subtitle).font(.system(size: 14)).foregroundStyle(.secondary)
-                Spacer()
-                Text("Esc to close  ·  ⌘, settings").font(.system(size: 12.5)).foregroundStyle(.tertiary)
-            }
-            HStack(alignment: .top, spacing: 16) {
+        VStack(alignment: .leading, spacing: Metrics.headerSpacing) {
+            SheetHeader(hyperGlyphs: model.hyperGlyphs)
+            HStack(alignment: .top, spacing: Metrics.columnSpacing) {
                 ForEach(Array(columns.enumerated()), id: \.offset) { _, column in
-                    VStack(spacing: 16) {
-                        ForEach(column) { ShortcutCard(group: $0) }
+                    VStack(spacing: Metrics.cardSpacing) {
+                        ForEach(column) { Self.card($0, model: model) }
                     }
                     .frame(maxWidth: .infinity, alignment: .top)
                 }
             }
-            if !model.workspaces.isEmpty {
-                WorkspacesCard(workspaces: model.workspaces, floating: model.floating)
-            }
         }
-        .padding(28)
+        .padding(Metrics.padding)
         .frame(width: width)
         .background(config.backgroundColor)
         .environment(\.colorScheme, config.colorScheme ?? Self.systemColorScheme)
     }
 
-    private var subtitle: String {
-        var text = "✦ Hyper = \(model.hyperGlyphs)"
-        if model.showShiftHint {
-            text += "  ·  add ⇧ to move instead of focus"
+    @ViewBuilder
+    static func card(_ card: SheetCard, model: SheetModel) -> some View {
+        switch card {
+        case let .shortcuts(title, entries): ShortcutCard(title: title, entries: entries)
+        case .workspaces: WorkspacesCard(workspaces: model.workspaces, floating: model.floating)
         }
-        return text
-    }
-
-    private var columns: [[ShortcutGroup]] {
-        ColumnLayout.distribute(
-            model.groups,
-            columns: ColumnLayout.columnCount(configured: config.columns, layoutWidth: width)
-        )
     }
 
     private static var systemColorScheme: ColorScheme {
         NSApplication.shared.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
+    }
+}
+
+struct SheetHeader: View {
+    let hyperGlyphs: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 18) {
+            Text("OmniWM").font(.system(size: 22, weight: .bold))
+            HStack(spacing: 6) {
+                KeyHint(keys: "Hyper", label: "Hyper is")
+                KeyChips(text: hyperGlyphs.map(String.init).joined(separator: " "))
+            }
+            Spacer()
+            KeyHint(keys: "esc", label: "close")
+            KeyHint(keys: "⌘ ,", label: "settings")
+        }
     }
 }

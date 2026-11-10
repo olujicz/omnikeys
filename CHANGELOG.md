@@ -13,6 +13,14 @@ All notable changes to this project are documented here. The format follows
   keyboard-mode actions, and the window switcher's ⌘⇥ / ⌥⇥ shortcuts when it is enabled.
 
 ### Changed
+- Bigger text on laptop screens. Automatic columns now pick 2, 3 or 4, whichever gives the biggest text.
+  The Workspaces card joins the columns instead of a full-width row.
+- New sheet design: actions on the left with keys right-aligned, drawn as key caps (✦ for Hyper),
+  section icons, and a header legend drawn with key caps. Key caps are white in the light theme.
+- Less repetition on the sheet: a ⇧ variant sits under its shortcut as "+ ⇧", related shortcuts such
+  as the palette modes share one line, and so do next / previous pairs (✦ ↓ / ↑). Cards keep their
+  order across columns, and the Workspaces card follows the workspace shortcuts. Tools list the most
+  used first.
 - ⌘, opens Settings instead of the settings file. Open Settings File… is still in the menu.
 - New app icon and menu-bar icon: the ✦ Hyper key cap. On macOS 26 and later the app icon follows the
   Dark, Clear and Tinted icon styles.

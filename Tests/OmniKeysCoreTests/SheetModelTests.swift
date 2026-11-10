@@ -17,7 +17,6 @@ struct SheetModelTests {
         #expect(model.workspaces.map(\.name) == ["1"])
         #expect(model.floating == ["Calculator"])
         #expect(model.hyperGlyphs == "⌃⌥⌘")
-        #expect(model.showShiftHint)
     }
 
     @Test func respectsShowWorkspacesAndShowFloating() {

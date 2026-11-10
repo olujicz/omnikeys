@@ -10,7 +10,13 @@ enum SheetRenderer {
             configFile: options.configFile,
             settingsFile: options.settingsFile
         )
-        guard let data = pngData(model: state.model, config: state.config, width: options.width) else { return false }
+        guard let data = pngData(
+            model: state.model,
+            config: state.config,
+            width: options.width,
+            maxHeight: options.height,
+            initialScale: options.scale
+        ) else { return false }
         do {
             try data.write(to: options.output)
             return true
@@ -21,9 +27,17 @@ enum SheetRenderer {
         }
     }
 
-    static func pngData(model: SheetModel, config: Config, width: Double) -> Data? {
-        let content = CheatSheet(model: model, width: width)
-            .environment(\.omniKeysConfig, config)
+    static func pngData(model: SheetModel, config: Config, width: Double, maxHeight: Double,
+                        initialScale: Double = 1) -> Data?
+    {
+        let layout = SheetLayout.fit(
+            model: model,
+            config: config,
+            width: width,
+            maxHeight: maxHeight,
+            initialScale: initialScale
+        )
+        let content = SheetLayout.scaledSheet(model: model, config: config, width: width, layout: layout)
             .background(Color(white: 0.17))
         let renderer = ImageRenderer(content: content)
         renderer.scale = 1

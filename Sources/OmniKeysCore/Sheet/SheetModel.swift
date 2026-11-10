@@ -4,20 +4,17 @@ public struct SheetModel: Equatable, Sendable {
     public var workspaces: [OmniWMWorkspace]
     public var floating: [String]
     public var hyperGlyphs: String
-    public var showShiftHint: Bool
 
     public init(
         groups: [ShortcutGroup],
         workspaces: [OmniWMWorkspace],
         floating: [String],
-        hyperGlyphs: String,
-        showShiftHint: Bool
+        hyperGlyphs: String
     ) {
         self.groups = groups
         self.workspaces = workspaces
         self.floating = floating
         self.hyperGlyphs = hyperGlyphs
-        self.showShiftHint = showShiftHint
     }
 
     public static func make(config: Config, settings: OmniWMSettings) -> SheetModel {
@@ -26,8 +23,7 @@ public struct SheetModel: Equatable, Sendable {
             groups: GroupBuilder.build(hotkeys: settings.hotkeys + settings.switcherHotkeys, config: config),
             workspaces: workspaces,
             floating: config.showFloating && !workspaces.isEmpty ? settings.floating : [],
-            hyperGlyphs: Binding.modifierGlyphs(settings.hyperModifiers),
-            showShiftHint: GroupBuilder.usesShiftToMove(settings.hotkeys)
+            hyperGlyphs: Binding.modifierGlyphs(settings.hyperModifiers)
         )
     }
 }

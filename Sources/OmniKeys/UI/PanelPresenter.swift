@@ -8,6 +8,7 @@ final class PanelPresenter {
     var onOpenSettings: (@MainActor () -> Void)?
     private var panel: CheatPanel?
     private var previousApp: NSRunningApplication?
+    private var lastLayout: (inputs: LayoutInputs, layout: (Double, SheetLayout.Result))?
 
     var isVisible: Bool {
         panel?.isVisible ?? false
@@ -15,24 +16,14 @@ final class PanelPresenter {
 
     func present(model: SheetModel, config: Config, on screen: NSScreen) {
         let visible = screen.visibleFrame
-        let metrics = ScreenMetrics.density(of: screen)
-        let width = visible.width * PanelSizing.widthFraction(config.width, physicalWidthMM: metrics.widthMM)
-        let maxHeight = visible.height * config.maxHeight
-        let densityScale = PanelSizing.densityScale(
-            mode: config.density,
-            pointsPerInch: metrics.pointsPerInch,
-            reference: config.referenceDensity
-        )
-        let fit = PanelSizing
-            .fit(width: width, maxHeight: maxHeight, initialScale: config.textSize * densityScale) { layoutWidth in
-                NSHostingController(rootView: Self.sheet(model, config, width: layoutWidth))
-                    .sizeThatFits(in: NSSize(width: layoutWidth, height: 10000))
-                    .height
-            }
-        let size = NSSize(width: width, height: fit.height)
-        let host = NSHostingView(rootView: Self.sheet(model, config, width: width / fit.scale)
-            .scaleEffect(fit.scale, anchor: .topLeading)
-            .frame(width: size.width, height: size.height, alignment: .topLeading))
+        let (width, layout) = layout(model: model, config: config, visible: visible, screen: screen)
+        let size = NSSize(width: width, height: layout.fit.height)
+        let host = NSHostingView(rootView: SheetLayout.scaledSheet(
+            model: model,
+            config: config,
+            width: width,
+            layout: layout
+        ))
         host.frame = NSRect(origin: .zero, size: size)
         host.autoresizingMask = [.width, .height]
 
@@ -67,6 +58,47 @@ final class PanelPresenter {
         panel.makeKeyAndOrderFront(nil)
     }
 
+    /// Everything the layout depends on; measuring is slow, so the last layout is reused while this is unchanged.
+    private struct LayoutInputs: Equatable {
+        let model: SheetModel
+        let config: Config
+        let visible: NSRect
+        let pointsPerInch: Double
+        let widthMM: Double
+    }
+
+    /// Panel width, and the columns and scale that give the biggest text on this screen.
+    private func layout(model: SheetModel, config: Config, visible: NSRect,
+                        screen: NSScreen) -> (Double, SheetLayout.Result)
+    {
+        let metrics = ScreenMetrics.density(of: screen)
+        let inputs = LayoutInputs(
+            model: model,
+            config: config,
+            visible: visible,
+            pointsPerInch: metrics.pointsPerInch,
+            widthMM: metrics.widthMM
+        )
+        if let cached = lastLayout, cached.inputs == inputs {
+            return cached.layout
+        }
+        let width = visible.width * PanelSizing.widthFraction(config.width, physicalWidthMM: metrics.widthMM)
+        let densityScale = PanelSizing.densityScale(
+            mode: config.density,
+            pointsPerInch: metrics.pointsPerInch,
+            reference: config.referenceDensity
+        )
+        let layout = SheetLayout.fit(
+            model: model,
+            config: config,
+            width: width,
+            maxHeight: visible.height * config.maxHeight,
+            initialScale: config.textSize * densityScale
+        )
+        lastLayout = (inputs, (width, layout))
+        return (width, layout)
+    }
+
     /// Remember who had focus (not when redrawing an open sheet, where that would be us).
     private func rememberPreviousApp() {
         if let front = NSWorkspace.shared.frontmostApplication, front != NSRunningApplication.current {
@@ -93,9 +125,5 @@ final class PanelPresenter {
         effect.layer?.masksToBounds = true
         effect.addSubview(host)
         return effect
-    }
-
-    private static func sheet(_ model: SheetModel, _ config: Config, width: Double) -> some View {
-        CheatSheet(model: model, width: width).environment(\.omniKeysConfig, config)
     }
 }
