@@ -94,4 +94,29 @@ struct OmniWMSettingsTests {
         #expect(AppNames.fallback(for: "com.example.myEditor") == "MyEditor")
         #expect(AppNames.fallback(for: "single") == "Single")
     }
+
+    @Test func skipsAppsWithoutAName() throws {
+        let settings = try OmniWMSettings.parse("""
+        [[workspaces]]
+        name = "1"
+
+        [[appRules]]
+        assignToWorkspace = "1"
+        bundleId = "com.apple.Safari.WebApp.0CED9575-B488-4FD8-86AB-BC3394AE030B"
+        layout = "float"
+
+        [[appRules]]
+        assignToWorkspace = "1"
+        bundleId = "com.tinyspeck.slackmacgap"
+        """, appName: AppNames.fallback(for:))
+        #expect(settings.workspaces.first?.apps == ["Slack"])
+        #expect(settings.floating.isEmpty)
+    }
+
+    @Test func appNameFallbackAvoidsUnreadableIDs() {
+        #expect(AppNames.fallback(for: "com.apple.Safari.WebApp.0CED9575-B488-4FD8-86AB-BC3394AE030B").isEmpty)
+        #expect(AppNames.fallback(for: "com.tinyspeck.slackmacgap") == "Slack")
+        #expect(AppNames.fallback(for: "com.usebruno.app") == "Bruno")
+        #expect(AppNames.fallback(for: "io.example.widgets.desktop") == "Widgets")
+    }
 }

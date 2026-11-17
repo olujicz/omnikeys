@@ -16,6 +16,10 @@ All notable changes to this project are documented here. The format follows
   a shortcut.
 - Names for Mark window / Remove window mark, listed under Windows.
 
+### Fixed
+- Apps that aren't installed get readable names (Slack, Microsoft Teams, Bruno, DBeaver…) instead of
+  bundle-id fragments, and uninstalled Safari / Chrome web apps are left off instead of showing a UUID.
+
 ### Changed
 - Bigger text on laptop screens. Automatic columns now pick 2, 3 or 4, whichever gives the biggest text.
   The Workspaces card joins the columns instead of a full-width row.

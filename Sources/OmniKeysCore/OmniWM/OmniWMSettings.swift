@@ -74,16 +74,20 @@ public struct OmniWMSettings: Equatable, Sendable {
         settings.workspaces = root.tables("workspaces").map(workspace)
         for rule in root.tables("appRules") {
             guard let bundleID = rule.optionalString("bundleId") else { continue }
+            let name = appName(bundleID)
+            // An empty name is an app the sheet can't name (an uninstalled web app): skip it.
+            if name.isEmpty {
+                continue
+            }
             if let target = rule.optionalString("assignToWorkspace"),
                let index = settings.workspaces.firstIndex(where: { $0.name == target })
             {
-                let name = appName(bundleID)
                 if !settings.workspaces[index].apps.contains(name) {
                     settings.workspaces[index].apps.append(name)
                 }
             }
             if rule.optionalString("layout") == "float" {
-                settings.floating.append(appName(bundleID))
+                settings.floating.append(name)
             }
         }
         return settings
