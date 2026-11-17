@@ -8,7 +8,8 @@ enum SheetRenderer {
     static func render(_ options: RenderOptions) -> Bool {
         let state = ConfigStore(paths: .current).load(
             configFile: options.configFile,
-            settingsFile: options.settingsFile
+            settingsFile: options.settingsFile,
+            includeMissingApps: true
         )
         guard let data = pngData(
             model: state.model,

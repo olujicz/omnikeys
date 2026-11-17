@@ -76,6 +76,7 @@ final class AppController {
 
     func showSheet() {
         guard !isPresenting else { return }
+        refreshIfAppsChanged()
         isPresenting = true
         Task {
             defer { isPresenting = false }
@@ -120,7 +121,7 @@ final class AppController {
     func exportShortcuts() {
         do {
             let text = try String(contentsOf: paths.omniWMSettingsFile, encoding: .utf8)
-            let settings = try OmniWMSettings.parse(text, appName: AppNameResolver.name(for:))
+            let settings = try OmniWMSettings.parse(text) { AppNameResolver.name(for: $0) }
             let data = try ShortcutTransfer.export(settings: settings)
             let panel = NSSavePanel()
             panel.title = "Export OmniKeys Shortcuts"
@@ -178,6 +179,14 @@ final class AppController {
 
     private func reloadIfChanged() {
         guard store.fileStamps() != stamps else { return }
+        reload()
+    }
+
+    /// Apps installed or removed since the last load change the Workspaces card without touching either
+    /// file. Re-resolving is ~45 Launch Services lookups (well under a millisecond once warm), so do it
+    /// whenever the sheet opens and reload only if the sheet would differ.
+    private func refreshIfAppsChanged() {
+        guard store.load().model != state.model else { return }
         reload()
     }
 

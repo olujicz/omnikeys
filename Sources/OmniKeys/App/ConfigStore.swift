@@ -64,7 +64,8 @@ struct ConfigStore {
     }
 
     /// Reads both files. A missing config.toml means defaults; a missing settings.toml becomes an issue.
-    func load(configFile: URL? = nil, settingsFile: URL? = nil) -> LoadedState {
+    /// - Parameter includeMissingApps: list apps that aren't installed (renders of fixture settings need them).
+    func load(configFile: URL? = nil, settingsFile: URL? = nil, includeMissingApps: Bool = false) -> LoadedState {
         let configURL = configFile ?? paths.configFile
         let settingsURL = settingsFile ?? paths.omniWMSettingsFile
         let configText = try? String(contentsOf: configURL, encoding: .utf8)
@@ -76,7 +77,7 @@ struct ConfigStore {
                     .mapError { .unreadable(path: settingsURL.path, reason: $0.localizedDescription) }
             }
         return LoadedState.make(configText: configText, settingsText: settingsText, settingsPath: settingsURL.path) {
-            AppNameResolver.name(for: $0)
+            AppNameResolver.name(for: $0, includeMissing: includeMissingApps)
         }
     }
 

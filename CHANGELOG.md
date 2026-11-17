@@ -17,8 +17,10 @@ All notable changes to this project are documented here. The format follows
 - Names for Mark window / Remove window mark, listed under Windows.
 
 ### Fixed
-- Apps that aren't installed get readable names (Slack, Microsoft Teams, Bruno, DBeaver…) instead of
-  bundle-id fragments, and uninstalled Safari / Chrome web apps are left off instead of showing a UUID.
+- The Workspaces card and floating list leave out apps that aren't installed on this Mac, and pick up
+  apps installed or removed later the next time the sheet opens. `--render` still lists them, with
+  readable names (Slack, Microsoft Teams, Bruno, DBeaver…) instead of bundle-id fragments or a web
+  app's UUID.
 
 ### Changed
 - Bigger text on laptop screens. Automatic columns now pick 2, 3 or 4, whichever gives the biggest text.
