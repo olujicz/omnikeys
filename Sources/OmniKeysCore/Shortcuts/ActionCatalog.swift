@@ -41,8 +41,9 @@ public enum ActionCatalog {
         "openCommandPalette.applications": "Palette: launcher", "openCommandPalette.files": "Palette: files",
         "volumeUp": "Volume up", "volumeDown": "Volume down", "volumeMute": "Mute",
         "mediaPlayPause": "Play / pause", "mediaNext": "Next track", "mediaPrevious": "Previous track",
-        "toggleShortcutPause": "Pause shortcuts", "beginPrefix": "Prefix mode",
-        "toggleWindowMode": "Window mode", "exitKeyboardMode": "Exit keyboard mode",
+        "toggleShortcutPause": "Pause shortcuts", "beginPrefix": "Prefix mode (next key only)",
+        "toggleWindowMode": "Enter / leave window mode", "exitKeyboardMode": "Exit keyboard mode",
+        "setWindowMark": "Mark window", "removeWindowMark": "Remove window mark",
         // Not OmniWM hotkeys: synthesized from [windowSwitcher] by OmniWMSettings.
         "windowSwitcher.activeWorkspace": "Window switcher: this workspace",
         "windowSwitcher.allWorkspaces": "Window switcher: all workspaces",
@@ -51,6 +52,9 @@ public enum ActionCatalog {
 
     /// The sheet's own row, which is not an OmniWM action.
     public static let cheatSheetID = "omnikeys.cheatSheet"
+
+    /// The Window mode card's Esc row, which OmniWM hard-wires.
+    public static let modeEscapeID = "omnikeys.modeEscape"
 
     /// Bases whose dotted actions share one line: "Palette ✦ +" then W windows, X commands, …
     static let families = ["openCommandPalette": "Palette", "windowSwitcher": "Window switcher"]
@@ -74,9 +78,16 @@ public enum ActionCatalog {
         public static let columns = "Columns & sizing"
         public static let windows = "Windows"
         public static let tools = "Tools"
+        /// The mode actions plus the single keys that work inside Window / Prefix mode.
+        public static let windowMode = "Window mode"
     }
 
-    public static let groupOrder = [Group.navigate, Group.workspaces, Group.columns, Group.windows, Group.tools]
+    public static let groupOrder = [
+        Group.navigate, Group.workspaces, Group.columns, Group.windows, Group.tools, Group.windowMode,
+    ]
+
+    /// Actions that enter or leave a keyboard mode; they head the Window mode card.
+    static let modeActions: Set<String> = ["toggleWindowMode", "beginPrefix", "exitKeyboardMode"]
 
     private static let navigation: Set<String> = [
         "focus", "move", "focusPrevious", "focusColumnFirst", "focusColumnLast", "focusColumn", "focusWindowInColumn",
@@ -86,6 +97,12 @@ public enum ActionCatalog {
     public static func group(for base: String) -> String {
         if navigation.contains(base) {
             return Group.navigate
+        }
+        if modeActions.contains(base) {
+            return Group.windowMode
+        }
+        if base.hasSuffix("WindowMark") {
+            return Group.windows
         }
         if base == "toggleWorkspaceLayout" {
             return Group.tools

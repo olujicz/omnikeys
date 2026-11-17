@@ -49,6 +49,7 @@ struct ShortcutCard: View {
         case ActionCatalog.Group.columns: "rectangle.split.3x1"
         case ActionCatalog.Group.windows: "macwindow"
         case ActionCatalog.Group.tools: "wrench.and.screwdriver"
+        case ActionCatalog.Group.windowMode: "keyboard"
         default: "keyboard"
         }
     }

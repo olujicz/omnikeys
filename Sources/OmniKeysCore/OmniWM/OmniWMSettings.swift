@@ -32,6 +32,9 @@ public struct OmniWMSettings: Equatable, Sendable {
     public var hotkeys: [OmniWMHotkey]
     /// ⌘Tab / ⌥Tab of OmniWM's window switcher. Kept apart from `hotkeys` so Export never writes them as hotkeys.
     public var switcherHotkeys: [OmniWMHotkey] = []
+    /// Single keys (`modeKey`) that run an action in Window or Prefix mode; `binding` holds the mode key ("H",
+    /// "Shift+R").
+    public var modeKeys: [OmniWMHotkey] = []
     public var workspaces: [OmniWMWorkspace]
     public var floating: [String]
     public var hyperModifiers: String
@@ -59,6 +62,11 @@ public struct OmniWMSettings: Equatable, Sendable {
             guard let id = table.optionalString("id"), let binding = table.optionalString("binding"),
                   binding != "Unassigned" else { return nil }
             return OmniWMHotkey(id: id, binding: binding)
+        }
+        settings.modeKeys = root.tables("hotkeys").compactMap { table in
+            guard let id = table.optionalString("id"), let key = table.optionalString("modeKey"),
+                  !key.isEmpty, key != "Unassigned" else { return nil }
+            return OmniWMHotkey(id: id, binding: key)
         }
         if let switcher = root.optionalTable("windowSwitcher") {
             settings.switcherHotkeys = switcherHotkeys(switcher)

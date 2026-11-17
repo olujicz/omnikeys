@@ -11,6 +11,10 @@ All notable changes to this project are documented here. The format follows
   It saves to `config.toml` and keeps your comments.
 - OmniWM 0.8 support: names for the renamed resize actions, command palette modes, volume, media and
   keyboard-mode actions, and the window switcher's ⌘⇥ / ⌥⇥ shortcuts when it is enabled.
+- Window mode card: the single keys (OmniWM's `modeKey`) that run commands in Window or Prefix mode,
+  with the shortcut that enters the mode and Esc to leave. It appears once Window or Prefix mode has
+  a shortcut.
+- Names for Mark window / Remove window mark, listed under Windows.
 
 ### Changed
 - Bigger text on laptop screens. Automatic columns now pick 2, 3 or 4, whichever gives the biggest text.

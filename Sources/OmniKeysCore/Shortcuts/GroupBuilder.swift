@@ -82,10 +82,24 @@ public enum GroupBuilder {
         var items: [Item]
     }
 
-    public static func build(hotkeys: [OmniWMHotkey], config: Config) -> [ShortcutGroup] {
+    /// - Parameter modeKeys: single keys for Window / Prefix mode. Shown only while a mode can be entered.
+    public static func build(hotkeys: [OmniWMHotkey], modeKeys: [OmniWMHotkey] = [],
+                             config: Config) -> [ShortcutGroup]
+    {
         var grouped: [String: [ShortcutRow]] = [:]
         for bucket in buckets(hotkeys, hide: config.hide) {
             grouped[ActionCatalog.group(for: bucket.base), default: []].append(row(for: bucket, labels: config.labels))
+        }
+        let canEnterMode = hotkeys.contains { $0.id == "toggleWindowMode" || $0.id == "beginPrefix" }
+        let modeRows = canEnterMode ? buckets(modeKeys, hide: config.hide)
+            .map { row(for: $0, labels: config.labels) } : []
+        if !modeRows.isEmpty {
+            grouped[ActionCatalog.Group.windowMode, default: []] += modeRows + [ShortcutRow(
+                modifiers: [],
+                key: "Esc",
+                action: "Leave window mode",
+                actionID: ActionCatalog.modeEscapeID
+            )]
         }
         let (mods, key) = Binding.split(config.hotkey)
         grouped[ActionCatalog.Group.tools, default: []].append(ShortcutRow(

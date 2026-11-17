@@ -125,6 +125,47 @@ struct GroupBuilderTests {
         #expect(groups.map(\.title) == ["Navigate", "Columns & sizing", "Windows", "Tools"])
     }
 
+    @Test func windowModeCardListsModeKeysAndEscape() {
+        let groups = GroupBuilder.build(
+            hotkeys: hotkeys([
+                ("toggleWindowMode", "Hyper+Semicolon"),
+                ("resizeContainerPrimarySpan.shrink", "Hyper+Minus"),
+            ]),
+            modeKeys: hotkeys([
+                ("resizeContainerPrimarySpan.shrink", "H"),
+                ("cycleSizeBackward", "Shift+R"),
+                ("cycleSizeForward", "R"),
+            ]),
+            config: Config()
+        )
+        #expect(rows(groups, "Window mode") == [
+            "Hyper ; | Enter / leave window mode",
+            "H | Column narrower",
+            "R | Cycle column width",
+            "⇧ R | Cycle column width back",
+            "Esc | Leave window mode",
+        ])
+        #expect(rows(groups, "Columns & sizing") == ["Hyper − | Column narrower"])
+        #expect(groups.map(\.title).last == "Window mode")
+    }
+
+    @Test func modeKeysHiddenWithoutAWayIntoTheMode() {
+        let groups = GroupBuilder.build(
+            hotkeys: [],
+            modeKeys: hotkeys([("balanceSizes", "B")]),
+            config: Config()
+        )
+        #expect(rows(groups, "Window mode").isEmpty)
+    }
+
+    @Test func markActionsGoToWindows() {
+        let groups = GroupBuilder.build(
+            hotkeys: hotkeys([("setWindowMark", "Hyper+U"), ("removeWindowMark", "Hyper+Shift+U")]),
+            config: Config()
+        )
+        #expect(rows(groups, "Windows") == ["Hyper U | Mark window", "Hyper ⇧ U | Remove window mark"])
+    }
+
     @Test func settingsEntriesUseBaseForSeries() {
         let entries = GroupBuilder.settingsEntries(hotkeys: hotkeys([
             ("switchWorkspace.0", "Hyper+1"),

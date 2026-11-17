@@ -38,6 +38,29 @@ struct OmniWMSettingsTests {
         #expect(settings.hotkeys == [OmniWMHotkey(id: "toggleScratchpad.1", binding: "Hyper+S")])
     }
 
+    @Test func readsModeKeysEvenWithoutBinding() throws {
+        let settings = try OmniWMSettings.parse("""
+        [[hotkeys]]
+        binding = "Hyper+Minus"
+        id = "resizeContainerPrimarySpan.shrink"
+        modeKey = "H"
+
+        [[hotkeys]]
+        binding = "Unassigned"
+        id = "cycleSizeBackward"
+        modeKey = "Shift+R"
+
+        [[hotkeys]]
+        binding = "Hyper+B"
+        id = "balanceSizes"
+        """, appName: { $0 })
+        #expect(settings.modeKeys == [
+            OmniWMHotkey(id: "resizeContainerPrimarySpan.shrink", binding: "H"),
+            OmniWMHotkey(id: "cycleSizeBackward", binding: "Shift+R"),
+        ])
+        #expect(settings.hotkeys.map(\.id) == ["resizeContainerPrimarySpan.shrink", "balanceSizes"])
+    }
+
     @Test func windowSwitcherShortcutsFollowItsSettings() throws {
         let settings = try OmniWMSettings.parse("""
         [windowSwitcher]
