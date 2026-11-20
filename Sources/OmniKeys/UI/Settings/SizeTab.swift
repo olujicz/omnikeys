@@ -26,7 +26,7 @@ struct SizeTab: View {
                 IssueFooter(
                     issues: ["width", "maxHeight"].flatMap(model.issues(for:)),
                     help: "Automatic uses 75% of the screen width, or 95% on screens narrower than 45 cm. "
-                        + "Content taller than the maximum height is scaled down to fit."
+                        + "Taller content shrinks by up to 15% to fit, then scrolls."
                 )
             }
             .disabled(!model.isEditable)

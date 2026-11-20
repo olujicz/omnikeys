@@ -69,4 +69,45 @@ struct PanelSizingTests {
         #expect(fit.columns == 2)
         #expect(fit.scale == 1)
     }
+
+    @Test func minimumScaleIsReadable() {
+        #expect(PanelSizing.minimumScale(for: 1) == 0.85)
+        #expect(PanelSizing.minimumScale(for: 2) == 1.7)
+        #expect(PanelSizing.minimumScale(for: 0.9) == 0.8)
+        // A deliberately small size is not raised.
+        #expect(PanelSizing.minimumScale(for: 0.6) == 0.6)
+    }
+
+    @Test func fitStopsAtTheMinimumScale() {
+        let fit = PanelSizing.fit(width: 1000, maxHeight: 250, initialScale: 1, minimumScale: 0.85) { _ in 500 }
+        #expect(!fit.fits)
+        #expect(fit.scale == 0.85)
+        #expect(fit.height == 250)
+    }
+
+    @Test func bestFitShrinksDownToTheMinimumScale() {
+        // 500 tall: fits at 0.9 with a 450 limit, which is above the 0.85 floor.
+        let fit = PanelSizing.bestFit(width: 1000, maxHeight: 450, initialScale: 1, minimumScale: 0.85,
+                                      columnCounts: [2]) { _, _ in 500 }
+        #expect(fit.scale == 0.9)
+        #expect(!fit.scrolls)
+    }
+
+    @Test func bestFitScrollsAtFullSizeWhenTheFloorIsNotEnough() {
+        let heights = [2: 1600.0, 3: 1200, 4: 1300]
+        let fit = PanelSizing.bestFit(width: 1000, maxHeight: 600, initialScale: 1, minimumScale: 0.85,
+                                      columnCounts: [2, 3, 4]) { _, columns in heights[columns] ?? 0 }
+        #expect(fit == SheetFit(scale: 1, height: 600, columns: 3, contentHeight: 1200))
+        #expect(fit.scrolls)
+    }
+
+    @Test func scrollingSkipsColumnCountsThatAreTooNarrowToRead() {
+        let heights = [2: 1600.0, 3: 1200, 4: 1000]
+        let fit = PanelSizing.bestFit(width: 1000, maxHeight: 600, initialScale: 1, minimumScale: 0.85,
+                                      columnCounts: [2, 3, 4],
+                                      isReadable: { _, columns in columns < 4 },
+                                      measure: { _, columns in heights[columns] ?? 0 })
+        #expect(fit.columns == 3)
+        #expect(fit.scrolls)
+    }
 }

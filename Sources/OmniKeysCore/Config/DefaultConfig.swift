@@ -48,12 +48,13 @@ public enum DefaultConfig {
     width = "auto"
 
     # Maximum height as a fraction of the screen height. Range 0.3 – 1.0.
-    # If the content is taller, the whole sheet scales down to fit.
+    # If the content is taller, the sheet shrinks by up to 15% (body text never
+    # below 12 pt) to fit; past that it keeps its size and scrolls.
     # Default: 0.94
     maxHeight = 0.94
 
     # Text size multiplier. 1.0 = normal, 1.2 = 20% bigger. Range 0.5 – 3.0.
-    # It still shrinks automatically if the sheet would not fit the screen.
+    # It shrinks by up to 15% if the sheet would not fit the screen.
     # Default: 1.0
     textSize = 1.0
 

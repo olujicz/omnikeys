@@ -17,7 +17,7 @@ enum SheetCard: Identifiable {
     /// Cards in reading order; the workspace list follows the workspace shortcuts.
     static func cards(for model: SheetModel) -> [SheetCard] {
         var cards = model.groups.map { SheetCard.shortcuts(title: $0.title, entries: SheetEntry.make($0.rows)) }
-        if !model.workspaces.isEmpty {
+        if !model.workspaces.isEmpty || !model.floating.isEmpty {
             let after = model.groups.firstIndex { $0.title == ActionCatalog.Group.workspaces }
             cards.insert(.workspaces, at: after.map { $0 + 1 } ?? cards.endIndex)
         }
@@ -46,14 +46,7 @@ struct CheatSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.headerSpacing) {
             SheetHeader(hyperGlyphs: model.hyperGlyphs)
-            HStack(alignment: .top, spacing: Metrics.columnSpacing) {
-                ForEach(Array(columns.enumerated()), id: \.offset) { _, column in
-                    VStack(spacing: Metrics.cardSpacing) {
-                        ForEach(column) { Self.card($0, model: model) }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .top)
-                }
-            }
+            SheetColumns(model: model, columns: columns)
         }
         .padding(Metrics.padding)
         .frame(width: width)
@@ -69,13 +62,33 @@ struct CheatSheet: View {
         }
     }
 
-    private static var systemColorScheme: ColorScheme {
+    static var systemColorScheme: ColorScheme {
         NSApplication.shared.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
+    }
+}
+
+/// Cards in columns, as SheetLayout arranged them.
+struct SheetColumns: View {
+    typealias Metrics = CheatSheet.Metrics
+    let model: SheetModel
+    let columns: [[SheetCard]]
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Metrics.columnSpacing) {
+            ForEach(Array(columns.enumerated()), id: \.offset) { _, column in
+                VStack(spacing: Metrics.cardSpacing) {
+                    ForEach(column) { CheatSheet.card($0, model: model) }
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+            }
+        }
     }
 }
 
 struct SheetHeader: View {
     let hyperGlyphs: String
+    /// The live panel has a search field; the rendered image does not.
+    var showsSearchHint = false
 
     var body: some View {
         HStack(alignment: .center, spacing: 18) {
@@ -85,6 +98,9 @@ struct SheetHeader: View {
                 KeyChips(text: hyperGlyphs.map(String.init).joined(separator: " "))
             }
             Spacer()
+            if showsSearchHint {
+                KeyHint(keys: "⌘ F", label: "search")
+            }
             KeyHint(keys: "esc", label: "close")
             KeyHint(keys: "⌘ ,", label: "settings")
         }

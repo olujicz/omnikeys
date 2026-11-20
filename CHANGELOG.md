@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
   with the shortcut that enters the mode and Esc to leave. It appears once Window or Prefix mode has
   a shortcut.
 - Names for Mark window / Remove window mark, listed under Windows.
+- Search in the cheat sheet: type to filter by action, section, key (`hyper+2`, `⌘⇧K`, `shift left`)
+  or workspace app. Esc clears the search, a second Esc closes the sheet, and ⌘F returns to the field.
+- Arrow keys, Page Up/Down, Home and End scroll the sheet while you type.
 
 ### Fixed
 - The Workspaces card and floating list leave out apps that aren't installed on this Mac, and pick up
@@ -25,6 +28,8 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 - Bigger text on laptop screens. Automatic columns now pick 2, 3 or 4, whichever gives the biggest text.
   The Workspaces card joins the columns instead of a full-width row.
+- A sheet too tall for the screen shrinks by at most 15% (body text never below 12 pt). Past that it
+  keeps its size and scrolls, with a fade and a More button showing there is more below.
 - New sheet design: actions on the left with keys right-aligned, drawn as key caps (✦ for Hyper),
   section icons, and a header legend drawn with key caps. Key caps are white in the light theme.
 - Less repetition on the sheet: a ⇧ variant sits under its shortcut as "+ ⇧", related shortcuts such

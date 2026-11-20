@@ -17,13 +17,13 @@ final class PanelPresenter {
     func present(model: SheetModel, config: Config, on screen: NSScreen) {
         let visible = screen.visibleFrame
         let (width, layout) = layout(model: model, config: config, visible: visible, screen: screen)
-        let size = NSSize(width: width, height: layout.fit.height)
-        let host = NSHostingView(rootView: SheetLayout.scaledSheet(
-            model: model,
-            config: config,
-            width: width,
-            layout: layout
-        ))
+        let size = NSSize(width: width, height: layout.fit.height + SheetPanel.searchBarHeight)
+        // Redrawing an open sheet keeps what is typed in its search field.
+        let field = panel?.isVisible == true ? panel?.searchField : nil
+        let query = field?.currentEditor()?.string ?? field?.stringValue ?? ""
+        let host = NSHostingView(rootView: SheetPanel(model: model, width: width, layout: layout, query: query)
+            .environment(\.omniKeysConfig, config)
+            .frame(width: size.width, height: size.height, alignment: .topLeading))
         host.frame = NSRect(origin: .zero, size: size)
         host.autoresizingMask = [.width, .height]
 
@@ -48,14 +48,29 @@ final class PanelPresenter {
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.closesOnResignKey = config.closeOnClickOutside
-        panel.contentView = effect
-        panel.setFrame(frame, display: true)
+        replaceContent(of: panel, with: effect, frame: frame)
         panel.onDismiss = { [weak self] restore in self?.dismiss(restoreFocus: restore) }
         panel.onOpenSettings = { [weak self] in self?.onOpenSettings?() }
         self.panel = panel
+        show(panel)
+    }
+
+    private func replaceContent(of panel: CheatPanel, with content: NSView, frame: NSRect) {
+        panel.makeFirstResponder(nil)
+        panel.searchField = nil
+        panel.contentView = content
+        panel.setFrame(frame, display: true)
+        content.layoutSubtreeIfNeeded()
+    }
+
+    private func show(_ panel: CheatPanel) {
         rememberPreviousApp()
         NSApp.activate()
         panel.makeKeyAndOrderFront(nil)
+        if let field = panel.searchField, panel.makeFirstResponder(field), let editor = field.currentEditor() {
+            // Focusing selects all; put the caret at the end so a redraw doesn't let the next key replace the query.
+            editor.selectedRange = NSRange(location: (editor.string as NSString).length, length: 0)
+        }
     }
 
     /// Everything the layout depends on; measuring is slow, so the last layout is reused while this is unchanged.
@@ -92,8 +107,9 @@ final class PanelPresenter {
             model: model,
             config: config,
             width: width,
-            maxHeight: visible.height * config.maxHeight,
-            initialScale: config.textSize * densityScale
+            maxHeight: visible.height * config.maxHeight - SheetPanel.searchBarHeight,
+            initialScale: config.textSize * densityScale,
+            searchable: true
         )
         lastLayout = (inputs, (width, layout))
         return (width, layout)

@@ -3,41 +3,51 @@ import OmniKeysCore
 import SwiftUI
 
 /// Picks the column count and scale that give the biggest text within the available space, and balances
-/// the columns by measured card heights.
+/// the columns by measured card heights. Text shrinks no further than `PanelSizing.minimumScale`;
+/// past that the sheet keeps its size and scrolls.
 @MainActor
 enum SheetLayout {
+    /// When the sheet has to scroll anyway, narrower columns than this (unscaled) would only add wrapping.
+    static let minimumColumnWidth = 340.0
+
     struct Result {
         let fit: SheetFit
         let columns: [[SheetCard]]
     }
 
+    /// - Parameter searchable: lay out the live panel's header, which has a ⌘F hint.
     static func fit(model: SheetModel, config: Config, width: Double, maxHeight: Double,
-                    initialScale: Double) -> Result
+                    initialScale: Double, searchable: Bool = false) -> Result
     {
-        let measurer = SheetMeasurer(model: model, config: config)
+        let measurer = SheetMeasurer(model: model, config: config, searchable: searchable)
         var arranged: [ArrangementKey: [[SheetCard]]] = [:]
         let fit = PanelSizing.bestFit(
             width: width,
             maxHeight: maxHeight,
             initialScale: initialScale,
-            columnCounts: ColumnLayout.candidates(configured: config.columns)
-        ) { layoutWidth, columns in
-            let (height, cards) = measurer.arrange(layoutWidth: layoutWidth, columns: columns)
-            arranged[ArrangementKey(layoutWidth: layoutWidth, columns: columns)] = cards
-            return height
-        }
+            minimumScale: PanelSizing.minimumScale(for: initialScale),
+            columnCounts: ColumnLayout.candidates(configured: config.columns),
+            isReadable: { layoutWidth, columns in
+                CheatSheet.Metrics.columnWidth(layoutWidth: layoutWidth, columns: columns) >= minimumColumnWidth
+            },
+            measure: { layoutWidth, columns in
+                let (height, cards) = measurer.arrange(layoutWidth: layoutWidth, columns: columns)
+                arranged[ArrangementKey(layoutWidth: layoutWidth, columns: columns)] = cards
+                return height
+            }
+        )
         let layoutWidth = width / fit.scale
         let columns = arranged[ArrangementKey(layoutWidth: layoutWidth, columns: fit.columns)]
             ?? measurer.arrange(layoutWidth: layoutWidth, columns: fit.columns).columns
         return Result(fit: fit, columns: columns)
     }
 
-    /// The sheet laid out at `width / scale` and scaled up to fill `width` × `fit.height`.
+    /// The whole sheet laid out at `width / scale` and scaled up to fill `width`, for `--render`.
     static func scaledSheet(model: SheetModel, config: Config, width: Double, layout: Result) -> some View {
         CheatSheet(model: model, width: width / layout.fit.scale, columns: layout.columns)
             .environment(\.omniKeysConfig, config)
             .scaleEffect(layout.fit.scale, anchor: .topLeading)
-            .frame(width: width, height: layout.fit.height, alignment: .topLeading)
+            .frame(width: width, height: layout.fit.contentHeight, alignment: .topLeading)
     }
 }
 
@@ -53,12 +63,14 @@ final class SheetMeasurer {
     private let model: SheetModel
     private let config: Config
     private let cards: [SheetCard]
+    private let searchable: Bool
     private let host = NSHostingController(rootView: AnyView(EmptyView()))
     private var cardHeights: [Double: [Double]] = [:]
 
-    init(model: SheetModel, config: Config) {
+    init(model: SheetModel, config: Config, searchable: Bool = false) {
         self.model = model
         self.config = config
+        self.searchable = searchable
         cards = SheetCard.cards(for: model)
     }
 
@@ -73,7 +85,7 @@ final class SheetMeasurer {
             return cards + Metrics.cardSpacing * Double(column.count - 1)
         }.max() ?? 0
         let header = height(
-            of: SheetHeader(hyperGlyphs: model.hyperGlyphs),
+            of: SheetHeader(hyperGlyphs: model.hyperGlyphs, showsSearchHint: searchable),
             width: layoutWidth - 2 * Metrics.padding
         )
         let total = 2 * Metrics.padding + header + (cards.isEmpty ? 0 : Metrics.headerSpacing + tallest)
