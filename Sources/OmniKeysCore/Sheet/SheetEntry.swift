@@ -79,7 +79,8 @@ public enum SheetEntry: Equatable, Sendable, Identifiable {
                 modifiers: Array(row.modifiers.dropFirst(shared)),
                 key: row.key,
                 action: row.action.hasPrefix(prefix) ? String(row.action.dropFirst(prefix.count)) : row.action,
-                actionID: row.actionID
+                actionID: row.actionID,
+                seriesKeys: row.seriesKeys
             )
         }
         return .family(

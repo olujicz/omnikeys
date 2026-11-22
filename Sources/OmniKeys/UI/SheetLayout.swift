@@ -92,6 +92,16 @@ final class SheetMeasurer {
         return (total, indices.map { $0.map { cards[$0] } })
     }
 
+    /// The cards over exactly `columns` columns at this layout width, balanced by measured height; columns
+    /// left over stay empty. No columns when there are no cards.
+    func flow(layoutWidth: Double, columns: Int) -> [[SheetCard]] {
+        guard !cards.isEmpty else { return [] }
+        let columns = max(1, columns)
+        let heights = heights(columnWidth: Metrics.columnWidth(layoutWidth: layoutWidth, columns: columns))
+        let flowed = ColumnLayout.flow(Array(cards.indices), columns: columns) { heights[$0] }
+        return flowed.map { $0.map { cards[$0] } } + Array(repeating: [], count: max(0, columns - flowed.count))
+    }
+
     private func heights(columnWidth: Double) -> [Double] {
         if let cached = cardHeights[columnWidth] {
             return cached

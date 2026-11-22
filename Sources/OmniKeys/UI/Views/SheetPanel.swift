@@ -88,18 +88,12 @@ struct SheetPanel: View {
     }
 
     /// The measured layout for the full sheet; while searching, the matching cards reflowed over the
-    /// same columns, balanced by line count. Unused columns stay empty so cards keep their width.
+    /// columns the full sheet shows, balanced by their measured heights. Unused columns stay empty so
+    /// cards keep their width.
     private func columns(for filtered: SheetModel) -> [[SheetCard]] {
         guard filtered != model else { return layout.columns }
-        let cards = SheetCard.cards(for: filtered)
-        guard !cards.isEmpty else { return [] }
-        let flowed = ColumnLayout.flow(cards, columns: layout.fit.columns) { card in
-            switch card {
-            case let .shortcuts(_, entries): Double(entries.count + 2)
-            case .workspaces: Double(filtered.workspaces.count + 3)
-            }
-        }
-        return flowed + Array(repeating: [], count: max(0, layout.fit.columns - flowed.count))
+        return SheetMeasurer(model: filtered, config: config)
+            .flow(layoutWidth: width / scale, columns: layout.columns.count)
     }
 
     // MARK: Scrolling

@@ -105,6 +105,59 @@ struct SheetModelTests {
         #expect(model.workspaces(matching: "workspace").map(\.name) == ["1", "2"])
         #expect(model.floating(matching: "calc") == ["Calculator"])
         #expect(model.floating(matching: "safari").isEmpty)
+        #expect(model.floating(matching: "workspaces") == ["Calculator", "System Settings"])
+    }
+
+    @Test func searchFindsKeysOfSeriesThatAreNotRisingNumbers() {
+        let numbers = (0 ... 9).map { OmniWMHotkey(id: "switchWorkspace.\($0)", binding: "Hyper+\(($0 + 1) % 10)") }
+        let functionKeys = (0 ... 2).map { OmniWMHotkey(id: "moveToWorkspace.\($0)", binding: "Control+F\($0 + 1)") }
+        let model = SheetModel.make(config: Config(), settings: OmniWMSettings(hotkeys: numbers + functionKeys))
+        let keys = { (query: String) in model.shortcutGroups(matching: query).flatMap(\.rows).map(\.keys) }
+
+        #expect(keys("hyper+5") == ["Hyper 1–0"])
+        #expect(keys("hyper+0") == ["Hyper 1–0"])
+        #expect(keys("ctrl+f2") == ["⌃ F1–F3"])
+    }
+
+    @Test func searchSkipsHiddenMembersOfASeries() {
+        var config = Config()
+        config.hide = ["switchWorkspace.1"]
+        let hotkeys = (0 ... 2).map { OmniWMHotkey(id: "switchWorkspace.\($0)", binding: "Hyper+\($0 + 1)") }
+        let model = SheetModel.make(config: config, settings: OmniWMSettings(hotkeys: hotkeys))
+        #expect(model.shortcutGroups(matching: "hyper+2").isEmpty)
+        #expect(!model.shortcutGroups(matching: "hyper+3").isEmpty)
+    }
+
+    @Test func chordSearchNeedsEveryModifierNamed() {
+        let settings = OmniWMSettings(hotkeys: [
+            OmniWMHotkey(id: "switchWorkspace.0", binding: "Hyper+2"),
+            OmniWMHotkey(id: "moveToWorkspace.0", binding: "Hyper+Shift+2"),
+        ])
+        let model = SheetModel.make(config: Config(), settings: settings)
+        let keys = { (query: String) in model.shortcutGroups(matching: query).flatMap(\.rows).map(\.keys) }
+
+        #expect(keys("hyper+2") == ["Hyper 2"])
+        #expect(keys("hyper+shift+2") == ["Hyper ⇧ 2"])
+        #expect(keys("hyper+sh") == ["Hyper ⇧ 2"])
+        // Without "+" it's a plain search, which matches both.
+        #expect(keys("hyper 2").count == 2)
+    }
+
+    @Test func searchReadsHyphenAsMinusAndHyperGlyphsAsHyper() {
+        let settings = OmniWMSettings(
+            hotkeys: [
+                OmniWMHotkey(id: "resizeColumn.shrink", binding: "Hyper+Minus"),
+                OmniWMHotkey(id: "switchWorkspace.0", binding: "Hyper+1"),
+                OmniWMHotkey(id: "focus.left", binding: "Control+Option+Command+H"),
+            ],
+            hyperModifiers: "Control+Option+Command"
+        )
+        let model = SheetModel.make(config: Config(), settings: settings)
+        let keys = { (query: String) in model.shortcutGroups(matching: query).flatMap(\.rows).map(\.keys) }
+
+        #expect(keys("hyper+-") == ["Hyper −"])
+        #expect(keys("⌃⌥⌘1") == ["Hyper 1"])
+        #expect(keys("⌃⌥⌘H") == ["⌃ ⌥ ⌘ H"])
     }
 
     @Test func filteredModelKeepsOnlyMatches() {
@@ -114,6 +167,7 @@ struct SheetModelTests {
         #expect(filtered.groups.isEmpty)
         #expect(filtered.workspaces.isEmpty)
         #expect(filtered.floating == ["Calculator"])
+        #expect(model.filtered(matching: "workspaces").floating == ["Calculator"])
     }
 
     @Test func seriesKeysExpandToSingleKeys() {

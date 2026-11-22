@@ -9,6 +9,9 @@ public struct ShortcutRow: Identifiable, Equatable, Sendable {
     public let action: String
     /// The OmniWM action id, or the shared base of a collapsed series ("focus" for focus.left…right).
     public let actionID: String
+    /// Each key a collapsed series stands for, in order ("1"…"9", "0" for "1–0"); just `key` otherwise.
+    /// Search matches these rather than re-reading the shown `key`.
+    public let seriesKeys: [String]
 
     public var id: String {
         "\(keys)|\(action)"
@@ -19,11 +22,12 @@ public struct ShortcutRow: Identifiable, Equatable, Sendable {
         (modifiers + [key]).joined(separator: " ")
     }
 
-    public init(modifiers: [String], key: String, action: String, actionID: String) {
+    public init(modifiers: [String], key: String, action: String, actionID: String, seriesKeys: [String]? = nil) {
         self.modifiers = modifiers
         self.key = key
         self.action = action
         self.actionID = actionID
+        self.seriesKeys = seriesKeys ?? [key]
     }
 
     /// Splits "Hyper ⇧ R" into modifiers and key.
@@ -166,6 +170,7 @@ public enum GroupBuilder {
         let baseName = label(bucket.base) ?? ActionCatalog.humanize(bucket.base)
         let key: String
         let action: String
+        var seriesKeys = bucket.items.map(\.key)
         if bucket.items.count > 1, Int(first.suffix) != nil, let lastKey = bucket.items.last?.key {
             key = "\(first.key)–\(lastKey)"
             let offset = bucket.items.contains { $0.suffix == "0" } ? 1 : 0
@@ -174,6 +179,7 @@ public enum GroupBuilder {
         } else if bucket.items.count > 1, directions.contains(first.suffix) {
             let order = { (item: Item) in directions.firstIndex(of: item.suffix) ?? directions.count }
             let sorted = bucket.items.sorted { order($0) < order($1) }
+            seriesKeys = sorted.map(\.key)
             let compact = sorted.allSatisfy { $0.key.count == 1 && $0.key.first?.isLetter == true }
             key = sorted.map(\.key).joined(separator: compact ? "/" : "")
             action = "\(baseName) " + sorted.map(\.suffix).joined(separator: "/")
@@ -187,7 +193,8 @@ public enum GroupBuilder {
             modifiers: bucket.mods,
             key: key,
             action: action,
-            actionID: bucket.items.count > 1 ? bucket.base : first.id
+            actionID: bucket.items.count > 1 ? bucket.base : first.id,
+            seriesKeys: seriesKeys
         )
     }
 

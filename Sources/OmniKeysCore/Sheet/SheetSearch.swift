@@ -20,8 +20,11 @@ public extension SheetModel {
     func shortcutGroups(matching query: String) -> [ShortcutGroup] {
         let terms = SheetSearch.terms(query)
         guard !terms.isEmpty else { return groups }
-        // "hyper+2" names a chord: match keys only, not labels that happen to contain "2".
+        // "hyper+2" names a chord: match keys only, not labels that happen to contain "2", and only
+        // bindings whose every modifier the chord names.
         let isChord = query.contains("+")
+        // A pasted Hyper chord ("⌃⌥⌘2") also reads as "hyper 2", since rows show Hyper as one cap.
+        let readings = [terms] + [SheetSearch.hyperReading(of: terms, hyperGlyphs: hyperGlyphs)].compactMap(\.self)
 
         return groups.compactMap { group in
             let rows = group.rows.filter { row in
@@ -30,10 +33,11 @@ public extension SheetModel {
                     return true
                 }
                 // Match the key terms against one binding at a time, even when the row shows a series.
-                return SheetSearch.bindings(of: row).contains { keys in
-                    terms.enumerated().allSatisfy { index, term in
-                        SheetSearch.keyMatches(term, keys: keys, allowsPrefix: index == terms.count - 1)
-                            || (!isChord && label.matches(term))
+                let bindings = SheetSearch.bindings(of: row)
+                return readings.contains { terms in
+                    bindings.contains { binding in
+                        SheetSearch.matches(terms, binding: binding, label: isChord ? nil : label)
+                            && (!isChord || SheetSearch.namesEveryModifier(of: binding, terms: terms))
                     }
                 }
             }
@@ -59,7 +63,10 @@ public extension SheetModel {
         let terms = SheetSearch.terms(query)
         guard !terms.isEmpty else { return floating }
         guard !query.contains("+") else { return [] }
-        return floating.filter { app in terms.allSatisfy(SheetSearch.Text(SheetSearch.fold(app)).matches) }
+        // "workspaces" names the card the floating apps are listed on, as it does for the workspaces.
+        return floating.filter { app in
+            terms.allSatisfy(SheetSearch.Text(SheetSearch.fold("Workspaces \(app)")).matches)
+        }
     }
 }
 
@@ -93,18 +100,59 @@ enum SheetSearch {
                 result.append(character)
             }
         }
-        return fold(separated).split { $0.isWhitespace || $0 == "+" }.map(String.init)
+        // The Minus key shows as "−"; a typed "-" means it.
+        return fold(separated).split { $0.isWhitespace || $0 == "+" }.map { $0 == "-" ? "−" : String($0) }
+    }
+
+    /// `terms` with a complete set of Hyper's modifier glyphs replaced by "hyper"; nil when they
+    /// don't hold all of them.
+    static func hyperReading(of terms: [String], hyperGlyphs: String) -> [String]? {
+        let glyphs = hyperGlyphs.map(String.init)
+        guard glyphs.count > 1, let first = terms.firstIndex(where: glyphs.contains) else { return nil }
+        var rest = terms
+        for glyph in glyphs {
+            guard let index = rest.firstIndex(of: glyph) else { return nil }
+            rest.remove(at: index)
+        }
+        rest.insert("hyper", at: min(first, rest.count))
+        return rest
     }
 
     static func fold(_ value: String) -> String {
         value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
-    /// Search terms for each single binding a row stands for: "Hyper ⇧ 1–3" gives one set per number,
-    /// each with the glyphs and their names ("⇧", "shift").
-    static func bindings(of row: ShortcutRow) -> [[String]] {
-        let modifiers = row.modifiers.flatMap(names)
-        return keys(in: row.key).map { modifiers + names($0) }
+    /// One single binding a row stands for, as search terms.
+    struct KeyBinding {
+        /// Every cap's terms: the glyphs and their names ("⇧", "shift").
+        let terms: [String]
+        /// Each modifier's terms on their own.
+        let modifiers: [[String]]
+    }
+
+    /// Each single binding a row stands for: "Hyper ⇧ 1–3" gives one per number.
+    static func bindings(of row: ShortcutRow) -> [KeyBinding] {
+        let modifiers = row.modifiers.map(names)
+        // Rows built by GroupBuilder list their series' keys; others are read from the shown key.
+        let keys = row.seriesKeys == [row.key] ? keys(in: row.key) : row.seriesKeys
+        return keys.map { KeyBinding(terms: modifiers.flatMap(\.self) + names($0), modifiers: modifiers) }
+    }
+
+    /// Every term matches the binding's keys, or the row's label when one is given.
+    static func matches(_ terms: [String], binding: KeyBinding, label: Text?) -> Bool {
+        terms.enumerated().allSatisfy { index, term in
+            keyMatches(term, keys: binding.terms, allowsPrefix: index == terms.count - 1)
+                || label?.matches(term) == true
+        }
+    }
+
+    /// The terms name each of the binding's modifiers, so "hyper+2" isn't taken for Hyper ⇧ 2.
+    static func namesEveryModifier(of binding: KeyBinding, terms: [String]) -> Bool {
+        binding.modifiers.allSatisfy { modifier in
+            terms.enumerated().contains { index, term in
+                keyMatches(term, keys: modifier, allowsPrefix: index == terms.count - 1)
+            }
+        }
     }
 
     /// "1–3" -> 1, 2, 3; "H/J/K/L" -> H, J, K, L; "←→" -> ←, →; anything else as is.

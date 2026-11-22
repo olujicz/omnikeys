@@ -20,12 +20,16 @@ final class AppController {
     private var registeredHotkey: HotkeySpec?
     private var hotkeyIssue: ConfigIssue?
     private var isPresenting = false
+    /// Bundle id -> name of every app rule, as of the last load.
+    private var resolvedApps: [String: String] = [:]
     private(set) var state: LoadedState
 
     init(paths: ConfigPaths) {
         self.paths = paths
         store = ConfigStore(paths: paths)
-        state = store.load()
+        var names: [String: String] = [:]
+        state = store.load { names[$0] = $1 }
+        resolvedApps = names
     }
 
     private var hotkeyText: String {
@@ -76,7 +80,19 @@ final class AppController {
 
     func showSheet() {
         guard !isPresenting else { return }
-        refreshIfAppsChanged()
+        // Apps installed or removed since the last load change the Workspaces card without touching
+        // either file. Reloading redraws a visible sheet itself.
+        if appsChanged {
+            reload()
+            if presenter.isVisible {
+                return
+            }
+        }
+        presentSheet()
+    }
+
+    private func presentSheet() {
+        guard !isPresenting else { return }
         isPresenting = true
         Task {
             defer { isPresenting = false }
@@ -182,17 +198,9 @@ final class AppController {
         reload()
     }
 
-    /// Apps installed or removed since the last load change the Workspaces card without touching either
-    /// file. Re-resolving is ~45 Launch Services lookups (well under a millisecond once warm), so do it
-    /// whenever the sheet opens and reload only if the sheet would differ.
-    private func refreshIfAppsChanged() {
-        guard store.load().model != state.model else { return }
-        reload()
-    }
-
     private func reload() {
         let setupIssues = store.prepare() // recreates a deleted config.toml
-        var loaded = store.load()
+        var loaded = load()
         registerHotkey(loaded.hotkey)
         loaded.issues = setupIssues + loaded.issues + [hotkeyIssue].compactMap(\.self)
         state = loaded
@@ -204,7 +212,7 @@ final class AppController {
         }
         if presenter.isVisible {
             // Redraw in place.
-            showSheet()
+            presentSheet()
         }
     }
 
@@ -271,5 +279,22 @@ final class AppController {
             NSApp.activate()
             alert.runModal()
         }
+    }
+}
+
+/// Tracking app names, so an app installed or removed since the last load shows up when the sheet opens.
+private extension AppController {
+    /// Whether any app rule now resolves to a different name (installed, removed or renamed). Only the
+    /// Launch Services lookups, one per app rule; neither file is read.
+    var appsChanged: Bool {
+        resolvedApps.contains { AppNameResolver.name(for: $0.key) != $0.value }
+    }
+
+    /// Reads both files and remembers what each app rule resolved to.
+    func load() -> LoadedState {
+        var names: [String: String] = [:]
+        let loaded = store.load { names[$0] = $1 }
+        resolvedApps = names
+        return loaded
     }
 }
