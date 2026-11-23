@@ -17,6 +17,8 @@ final class StatusItem {
 
     private let actions: Actions
     private var item: NSStatusItem?
+    /// Refreshes Launch at Login each time the menu opens: it can change in System Settings, which doesn't tell us.
+    private let refresher = MenuRefresher()
 
     /// The ✦ key cap from the asset catalog; a template image, so macOS colours it for the menu bar.
     static var icon: NSImage? {
@@ -39,7 +41,9 @@ final class StatusItem {
         }
         let item = item ?? NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = Self.icon
-        item.menu = Self.makeMenu(hotkey: hotkey, issues: issues, launchAtLogin: LoginItem.status, actions: actions)
+        let menu = Self.makeMenu(hotkey: hotkey, issues: issues, launchAtLogin: LoginItem.status, actions: actions)
+        menu.delegate = refresher
+        item.menu = menu
         self.item = item
     }
 
@@ -62,13 +66,34 @@ final class StatusItem {
         menu.addItem(ActionMenuItem("Open Settings File…", handler: actions.openSettingsFile))
         menu.addItem(ActionMenuItem("Export Shortcuts…", handler: actions.exportShortcuts))
         menu.addItem(ActionMenuItem("Import Shortcuts…", handler: actions.importShortcuts))
-        let loginTitle = launchAtLogin == .requiresApproval ? "Launch at Login (approve in System Settings)" : "Launch at Login"
-        let login = ActionMenuItem(loginTitle, handler: actions.toggleLaunchAtLogin)
-        login.state = launchAtLogin == .enabled ? .on : .off
+        let login = ActionMenuItem("Launch at Login", handler: actions.toggleLaunchAtLogin)
+        login.identifier = loginItemID
+        show(launchAtLogin, in: login)
         menu.addItem(login)
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem("About OmniKeys", handler: actions.about))
         menu.addItem(ActionMenuItem("Quit OmniKeys", key: "q", handler: actions.quit))
         return menu
+    }
+
+    private static let loginItemID = NSUserInterfaceItemIdentifier("launchAtLogin")
+
+    /// Waiting for approval counts as on, as in Settings: choosing the item then turns it off.
+    fileprivate static func show(_ status: LoginItem.Status, in item: NSMenuItem) {
+        item.title = status == .requiresApproval ? "Launch at Login (approve in System Settings)" : "Launch at Login"
+        item.state = switch status {
+        case .enabled: .on
+        case .requiresApproval: .mixed
+        case .disabled: .off
+        }
+    }
+
+    private final class MenuRefresher: NSObject, NSMenuDelegate {
+        func menuNeedsUpdate(_ menu: NSMenu) {
+            MainActor.assumeIsolated {
+                guard let item = menu.items.first(where: { $0.identifier == StatusItem.loginItemID }) else { return }
+                StatusItem.show(LoginItem.status, in: item)
+            }
+        }
     }
 }

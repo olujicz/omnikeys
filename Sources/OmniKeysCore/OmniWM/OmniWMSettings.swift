@@ -30,6 +30,8 @@ public struct OmniWMSettings: Equatable, Sendable {
     public static let defaultHyperModifiers = "Control+Option+Command"
 
     public var hotkeys: [OmniWMHotkey]
+    /// Actions bound to "Unassigned". Kept so Export carries them and Import clears those bindings elsewhere.
+    public var unassigned: [String] = []
     /// ⌘Tab / ⌥Tab of OmniWM's window switcher. Kept apart from `hotkeys` so Export never writes them as hotkeys.
     public var switcherHotkeys: [OmniWMHotkey] = []
     /// Single keys (`modeKey`) that run an action in Window or Prefix mode; `binding` holds the mode key ("H",
@@ -58,11 +60,11 @@ public struct OmniWMSettings: Equatable, Sendable {
         if let hyper = root.optionalTable("general")?.optionalString("hyperKeyModifiers") {
             settings.hyperModifiers = hyper
         }
-        settings.hotkeys = root.tables("hotkeys").compactMap { table in
-            guard let id = table.optionalString("id"), let binding = table.optionalString("binding"),
-                  binding != "Unassigned" else { return nil }
-            return OmniWMHotkey(id: id, binding: binding)
+        let bindings = root.tables("hotkeys").compactMap { table in
+            table.optionalString("id").flatMap { id in table.optionalString("binding").map { (id, $0) } }
         }
+        settings.hotkeys = bindings.filter { $0.1 != "Unassigned" }.map { OmniWMHotkey(id: $0.0, binding: $0.1) }
+        settings.unassigned = bindings.filter { $0.1 == "Unassigned" }.map(\.0)
         settings.modeKeys = root.tables("hotkeys").compactMap { table in
             guard let id = table.optionalString("id"), let key = table.optionalString("modeKey"),
                   !key.isEmpty, key != "Unassigned" else { return nil }
@@ -86,7 +88,7 @@ public struct OmniWMSettings: Equatable, Sendable {
                     settings.workspaces[index].apps.append(name)
                 }
             }
-            if rule.optionalString("layout") == "float" {
+            if rule.optionalString("layout") == "float", !settings.floating.contains(name) {
                 settings.floating.append(name)
             }
         }

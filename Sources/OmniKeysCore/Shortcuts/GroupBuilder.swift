@@ -129,8 +129,10 @@ public enum GroupBuilder {
             }
             let item = Item(suffix: suffix, key: key, id: hotkey.id)
             let isSeries = Int(suffix) != nil || directions.contains(suffix)
+            // Join only a series of the same kind: `switchWorkspace.next` must not swallow `switchWorkspace.0…8`.
             if isSeries, let index = buckets.firstIndex(where: {
-                $0.base == base && $0.mods == mods && !$0.items[0].suffix.isEmpty
+                $0.base == base && $0.mods == mods && (Int($0.items[0].suffix) != nil) == (Int(suffix) != nil)
+                    && (directions.contains($0.items[0].suffix) == directions.contains(suffix))
             }) {
                 buckets[index].items.append(item)
             } else {
@@ -162,6 +164,20 @@ public enum GroupBuilder {
         return ActionCatalog.groupOrder.flatMap { group in entries.filter { $0.group == group } }
     }
 
+    /// The numbered items in order of their number, cut where a number is missing.
+    private static func numberedRuns(_ items: [Item]) -> [[Item]] {
+        let sorted = items.sorted { (Int($0.suffix) ?? 0) < (Int($1.suffix) ?? 0) }
+        var runs: [[Item]] = []
+        for item in sorted {
+            if let previous = runs.last?.last, let number = Int(item.suffix), Int(previous.suffix) == number - 1 {
+                runs[runs.count - 1].append(item)
+            } else {
+                runs.append([item])
+            }
+        }
+        return runs
+    }
+
     private static func row(for bucket: Bucket, labels: [String: String]) -> ShortcutRow {
         func label(_ id: String) -> String? {
             labels[id] ?? ActionCatalog.names[id]
@@ -171,11 +187,19 @@ public enum GroupBuilder {
         let key: String
         let action: String
         var seriesKeys = bucket.items.map(\.key)
-        if bucket.items.count > 1, Int(first.suffix) != nil, let lastKey = bucket.items.last?.key {
-            key = "\(first.key)–\(lastKey)"
-            let offset = bucket.items.contains { $0.suffix == "0" } ? 1 : 0
-            let numbers = bucket.items.compactMap { Int($0.suffix) }.map { $0 + offset }
-            action = "\(baseName) \(numbers.min() ?? 0)–\(numbers.max() ?? 0)"
+        if bucket.items.count > 1, Int(first.suffix) != nil {
+            // Shown numbers start at 1 (see zeroBasedSeries). Gaps (a hidden or unassigned item) split the
+            // range: "1–3, 5–9".
+            let offset = ActionCatalog.zeroBasedSeries.contains(bucket.base)
+                || bucket.items.contains { $0.suffix == "0" } ? 1 : 0
+            let runs = numberedRuns(bucket.items)
+            seriesKeys = runs.flatMap { $0.map(\.key) }
+            key = runs.map { $0.count > 1 ? "\($0[0].key)–\($0[$0.count - 1].key)" : $0[0].key }
+                .joined(separator: ", ")
+            action = "\(baseName) " + runs.map { run in
+                let numbers = run.compactMap { Int($0.suffix) }.map { $0 + offset }
+                return run.count > 1 ? "\(numbers[0])–\(numbers[numbers.count - 1])" : "\(numbers[0])"
+            }.joined(separator: ", ")
         } else if bucket.items.count > 1, directions.contains(first.suffix) {
             let order = { (item: Item) in directions.firstIndex(of: item.suffix) ?? directions.count }
             let sorted = bucket.items.sorted { order($0) < order($1) }

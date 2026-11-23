@@ -26,8 +26,24 @@ final class SettingsModel {
     private static let defaultCustomWidth = 0.75
 
     func update(state: LoadedState, launchAtLogin: LoginItem.Status) {
+        let draft = config
+        let draftBase = saved
         saved = state.config
         config = state.config
+        // Keep edits not committed yet (a label being typed, a slider mid-drag): a reload must not wipe them.
+        func keep(_ keyPath: WritableKeyPath<Config, some Equatable>) {
+            if draft[keyPath: keyPath] != draftBase[keyPath: keyPath] {
+                config[keyPath: keyPath] = draft[keyPath: keyPath]
+            }
+        }
+        keep(\.width)
+        keep(\.maxHeight)
+        keep(\.textSize)
+        keep(\.backgroundOpacity)
+        keep(\.accent)
+        for id in Set(draft.labels.keys).union(draftBase.labels.keys) where draft.labels[id] != draftBase.labels[id] {
+            config.labels[id] = draft.labels[id]
+        }
         issues = state.issues
         shortcuts = state.shortcuts
         settingsIssue = state.settingsIssue

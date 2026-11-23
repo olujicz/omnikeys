@@ -54,20 +54,113 @@ public enum ConfigEditor {
             return result + "[labels]\n\(bareOrQuoted(id)) = \(quoted(value))\n"
         }
         let section = statements[(headerIndex + 1)...].prefix { $0.header == nil }
-        let matches = section.filter { $0.key == id }
-        if let value {
-            if let match = matches.first {
-                lines.replaceSubrange(match.lines, with: [replacement(for: match, value: .string(value), in: lines)])
-            } else {
-                let after = section.last?.lines.upperBound ?? statements[headerIndex].lines.upperBound
-                lines.insert("\(bareOrQuoted(id)) = \(quoted(value))", at: after + 1)
-            }
-        } else {
+        let entries = labelEntries(statements)
+        let matches = entries.filter { $0.id == id }.map(\.statement)
+        guard let value else {
             for match in matches.reversed() {
                 lines.removeSubrange(match.lines)
             }
+            return lines.joined(separator: "\n")
+        }
+        if let match = matches.first {
+            lines.replaceSubrange(match.lines, with: [replacement(for: match, value: .string(value), in: lines)])
+            return lines.joined(separator: "\n")
+        }
+        var (edits, moved) = roomForLabel(id, entries: entries, statements: statements, lines: lines)
+        let after = (section.last?.lines.upperBound ?? statements[headerIndex].lines.upperBound) + 1
+        edits.append(Edit(range: after ..< after, lines: moved + ["\(bareOrQuoted(id)) = \(quoted(value))"]))
+        // Bottom-up; at the same line, replace before inserting so a removal can't take the inserted line.
+        for edit in edits
+            .sorted(by: { ($0.range.lowerBound, $0.range.count) > ($1.range.lowerBound, $1.range.count) })
+        {
+            lines.replaceSubrange(edit.range, with: edit.lines)
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// A replacement of whole lines; applied bottom-up so earlier line numbers stay valid.
+    private struct Edit {
+        var range: Range<Int>
+        var lines: [String]
+    }
+
+    /// A label assignment with its full id. `table` is "x" inside `[labels.x]`, nil inside [labels].
+    private struct LabelEntry {
+        var statement: Statement
+        var id: String
+        var table: String?
+    }
+
+    /// Edits so `id = "…"` doesn't collide with labels nested under it (`id.next = …` or `[labels.id]`), which TOML
+    /// rejects: nested dotted keys get quoted, and nested tables' labels move into [labels] as quoted keys.
+    /// Returns the edits and the moved lines, which go into [labels] just above the new label.
+    private static func roomForLabel(
+        _ id: String,
+        entries: [LabelEntry],
+        statements: [Statement],
+        lines: [String]
+    ) -> (edits: [Edit], moved: [String]) {
+        func isNested(_ name: String) -> Bool {
+            name == id || name.hasPrefix(id + ".")
+        }
+        var edits: [Edit] = []
+        var moved: [String] = []
+        for entry in entries where entry.id.hasPrefix(id + ".") {
+            let range = entry.statement.lines.lowerBound ..< entry.statement.lines.upperBound + 1
+            if let table = entry.table, isNested(table) {
+                moved += requoted(entry.statement, as: entry.id, in: lines)
+                edits.append(Edit(range: range, lines: []))
+            } else if isBareDotted(entry.statement.rawKey) {
+                edits.append(Edit(
+                    range: range,
+                    lines: requoted(entry.statement, as: entry.statement.key ?? "", in: lines)
+                ))
+            }
+        }
+        for statement in statements {
+            if let name = statement.header.flatMap(labelTableName), isNested(name) {
+                edits.append(Edit(range: statement.lines.lowerBound ..< statement.lines.upperBound + 1, lines: []))
+            }
+        }
+        return (edits, moved)
+    }
+
+    /// Every label assignment with its full id, including those in `[labels.x]` tables (`header` is then "x").
+    private static func labelEntries(_ statements: [Statement]) -> [LabelEntry] {
+        var result: [LabelEntry] = []
+        var inLabels = false
+        var table: String? // "x" inside [labels.x]
+        for statement in statements {
+            if let header = statement.header {
+                table = labelTableName(header)
+                inLabels = header == "labels" || table != nil
+            } else if inLabels, let key = statement.key {
+                result.append(LabelEntry(statement: statement, id: table.map { "\($0).\(key)" } ?? key, table: table))
+            }
+        }
+        return result
+    }
+
+    /// "x.y" for a `[labels.x.y]` header, else nil.
+    private static func labelTableName(_ header: String) -> String? {
+        let parts = header.split(separator: ".", omittingEmptySubsequences: false)
+            .map { unquoted($0.trimmingCharacters(in: .whitespaces)) }
+        guard parts.count > 1, parts[0] == "labels" else { return nil }
+        return parts.dropFirst().joined(separator: ".")
+    }
+
+    private static func isBareDotted(_ rawKey: String) -> Bool {
+        rawKey.contains(".") && rawKey.first != "\"" && rawKey.first != "'"
+    }
+
+    /// The statement's lines with its key replaced by `key` in quotes.
+    private static func requoted(_ statement: Statement, as key: String, in lines: [String]) -> [String] {
+        var result = Array(lines[statement.lines])
+        let first = result[0]
+        let indent = first.prefix { $0 == " " || $0 == "\t" }
+        let rest = first.dropFirst(indent.count).dropFirst(statement.rawKey.count)
+        result[0] = "\(indent)\(quoted(key))\(rest)"
+        return result
     }
 
     // MARK: - Parsing

@@ -119,7 +119,7 @@ enum SheetSearch {
     }
 
     static func fold(_ value: String) -> String {
-        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 
     /// One single binding a row stands for, as search terms.

@@ -50,7 +50,9 @@ public enum ShortcutTransfer {
     public static func export(settings: OmniWMSettings) throws -> Data {
         let document = ShortcutTransferDocument(
             hyperKeyModifiers: settings.hyperModifiers,
+            // Unassigned actions travel too, so importing clears those bindings on the other Mac.
             hotkeys: settings.hotkeys.map { ShortcutTransferHotkey(id: $0.id, binding: $0.binding) }
+                + settings.unassigned.map { ShortcutTransferHotkey(id: $0, binding: "Unassigned") }
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -112,7 +114,7 @@ public enum ShortcutTransfer {
         var result: [String: Int] = [:]
         var index = 0
         while index < lines.count {
-            guard lines[index].trimmingCharacters(in: .whitespaces) == "[[hotkeys]]" else {
+            guard lines[index].trimmingCharacters(in: .whitespacesAndNewlines) == "[[hotkeys]]" else {
                 index += 1
                 continue
             }
@@ -137,8 +139,14 @@ public enum ShortcutTransfer {
 
     /// Sets `[general].hyperKeyModifiers`, adding the key or the whole table when missing.
     private static func setHyperKeyModifiers(_ modifiers: String, in lines: inout [String]) {
-        guard let header = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "[general]" }) else {
-            lines.insert(contentsOf: ["[general]", "hyperKeyModifiers = \(tomlString(modifiers))", ""], at: 0)
+        guard let header = lines
+            .firstIndex(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines) == "[general]" })
+        else {
+            // Append: a header at the top would capture any root-level keys above the first table.
+            while lines.last?.trimmingCharacters(in: .whitespaces).isEmpty == true {
+                lines.removeLast()
+            }
+            lines += ["", "[general]", "hyperKeyModifiers = \(tomlString(modifiers))", ""]
             return
         }
         let end = sectionEnd(after: header, in: lines)
@@ -157,17 +165,51 @@ public enum ShortcutTransfer {
     }
 
     private static func quotedValue(in line: String, key: String) -> String? {
-        let prefix = "\(key) = \""
-        guard let start = line.range(of: prefix), line.hasSuffix("\"") else { return nil }
-        let valueStart = start.upperBound
-        let valueEnd = line.index(before: line.endIndex)
-        return String(line[valueStart ..< valueEnd]).replacingOccurrences(of: "\\\"", with: "\"")
-            .replacingOccurrences(of: "\\\\", with: "\\")
+        quotedAssignment(in: line, key: key)?.value
     }
 
+    /// Replaces only the quoted value, keeping spacing, a trailing comment and a CR line ending.
     private static func replacingQuotedValue(in line: String, key: String, value: String) -> String {
-        let indentation = line.prefix { $0 == " " || $0 == "\t" }
-        return "\(indentation)\(key) = \(tomlString(value))"
+        guard let assignment = quotedAssignment(in: line, key: key) else { return line }
+        var result = line
+        result.replaceSubrange(assignment.range, with: tomlString(value))
+        return result
+    }
+
+    /// Reads `key = "value"`, allowing any spacing around `=`, a trailing `# comment` and a CR line ending.
+    /// Returns the decoded value and the range of the quoted string, quotes included.
+    private static func quotedAssignment(in line: String, key: String) -> (value: String, range: Range<String.Index>)? {
+        var index = line.firstIndex { $0 != " " && $0 != "\t" } ?? line.endIndex
+        guard line[index...].hasPrefix(key) else { return nil }
+        index = line.index(index, offsetBy: key.count)
+        func skipSpace() {
+            while index < line.endIndex, line[index] == " " || line[index] == "\t" {
+                index = line.index(after: index)
+            }
+        }
+        skipSpace()
+        guard index < line.endIndex, line[index] == "=" else { return nil }
+        index = line.index(after: index)
+        skipSpace()
+        guard index < line.endIndex, line[index] == "\"" else { return nil }
+        let start = index
+        var value = ""
+        index = line.index(after: index)
+        while index < line.endIndex, line[index] != "\"" {
+            if line[index] == "\\" {
+                index = line.index(after: index)
+                guard index < line.endIndex else { return nil }
+            }
+            value.append(line[index])
+            index = line.index(after: index)
+        }
+        guard index < line.endIndex else { return nil }
+        index = line.index(after: index)
+        let range = start ..< index
+        skipSpace()
+        let rest = line[index...]
+        guard rest.isEmpty || rest == "\r" || rest.hasPrefix("#") else { return nil }
+        return (value, range)
     }
 
     private static func tomlString(_ value: String) -> String {

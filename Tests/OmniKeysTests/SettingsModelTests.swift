@@ -160,10 +160,15 @@ struct SettingsModelTests {
         #expect(model.config.labels.isEmpty)
     }
 
-    @Test func updateReplacesDraftAndSplitsIssues() {
+    @Test func updateKeepsUncommittedDraftsAndSplitsIssues() {
         model.number(\.textSize, in: 0.5 ... 3, step: 0.05, draft: true).wrappedValue = 2
-        load(Config(), issues: [ConfigIssue("bad", key: "textSize"), ConfigIssue("general")])
-        #expect(model.config.textSize == 1)
+        var loaded = Config()
+        loaded.theme = .light
+        load(loaded, issues: [ConfigIssue("bad", key: "textSize"), ConfigIssue("general")])
+        #expect(model.config.textSize == 2) // a reload (e.g. Launch at Login) must not wipe a slider mid-drag
+        #expect(model.config.theme == .light)
+        model.commit()
+        #expect(model.config.textSize == 2)
         #expect(model.issues(for: "textSize").map(\.message) == ["bad"])
         #expect(model.generalIssues.map(\.message) == ["general"])
     }

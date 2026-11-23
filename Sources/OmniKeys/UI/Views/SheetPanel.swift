@@ -15,8 +15,9 @@ struct SheetPanel: View {
     let width: Double
     let layout: SheetLayout.Result
     @State private var query: String
-    @State private var contentBottom = 0.0
-    @State private var viewportHeight = 0.0
+    /// Only this flag is state, not the scroll offset: a change re-runs `body`, which filters and measures the
+    /// cards, so it must not change on every scroll frame.
+    @State private var hasMoreBelow = false
     @Environment(\.omniKeysConfig) private var config
 
     init(model: SheetModel, width: Double, layout: SheetLayout.Result, query: String) {
@@ -45,13 +46,15 @@ struct SheetPanel: View {
                 ScrollView {
                     Scaled(scale: scale, width: width) { results }
                         .id(Self.contentID)
-                        .onGeometryChange(for: Double.self) { $0.frame(in: .named(Self.scrollSpace)).maxY } action: {
-                            contentBottom = $0
+                        .onGeometryChange(for: Bool.self) { geometry in
+                            let viewport = geometry.bounds(of: .named(Self.scrollSpace))?.height ?? 0
+                            return viewport > 0 && geometry.frame(in: .named(Self.scrollSpace)).maxY - viewport > 1
+                        } action: {
+                            hasMoreBelow = $0
                         }
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .coordinateSpace(.named(Self.scrollSpace))
-                .onGeometryChange(for: Double.self) { $0.size.height } action: { viewportHeight = $0 }
                 .mask { scrollMask }
                 .overlay(alignment: .bottom) {
                     if hasMoreBelow {
@@ -100,10 +103,6 @@ struct SheetPanel: View {
 
     private static let contentID = "cards"
     private nonisolated static let scrollSpace = "sheet-scroll"
-
-    private var hasMoreBelow: Bool {
-        viewportHeight > 0 && contentBottom - viewportHeight > 1
-    }
 
     /// Fades the bottom edge while more content is hidden below it.
     private var scrollMask: some View {

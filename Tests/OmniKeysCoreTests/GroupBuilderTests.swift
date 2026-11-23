@@ -218,4 +218,34 @@ struct GroupBuilderTests {
         config.setHidden(true, entry)
         #expect(config.hide == ["toggleOverview", "switchWorkspace.next"])
     }
+
+    @Test func numbersSeriesFromZeroEvenWhenTheFirstIsMissing() {
+        let groups = GroupBuilder.build(
+            hotkeys: hotkeys([("switchWorkspace.1", "Hyper+2"), ("switchWorkspace.2", "Hyper+3")]),
+            config: Config()
+        )
+        #expect(rows(groups, "Workspaces & monitors") == ["Hyper 2–3 | Go to workspace 2–3"])
+    }
+
+    @Test func splitsSeriesAtAGap() {
+        var config = Config()
+        config.hide = ["switchWorkspace.2"]
+        let groups = GroupBuilder.build(
+            hotkeys: hotkeys((0 ..< 5).map { ("switchWorkspace.\($0)", "Hyper+\($0 + 1)") }),
+            config: config
+        )
+        #expect(rows(groups, "Workspaces & monitors") == ["Hyper 1–2, 4–5 | Go to workspace 1–2, 4–5"])
+    }
+
+    @Test func namedActionDoesNotSwallowANumberSeries() {
+        let groups = GroupBuilder.build(
+            hotkeys: hotkeys([
+                ("switchWorkspace.next", "Hyper+Tab"),
+                ("switchWorkspace.0", "Hyper+1"),
+                ("switchWorkspace.1", "Hyper+2"),
+            ]),
+            config: Config()
+        )
+        #expect(rows(groups, "Workspaces & monitors").contains("Hyper 1–2 | Go to workspace 1–2"))
+    }
 }

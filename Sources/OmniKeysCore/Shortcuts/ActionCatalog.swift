@@ -87,6 +87,15 @@ public enum ActionCatalog {
     ]
 
     /// Actions that enter or leave a keyboard mode; they head the Window mode card.
+    /// Series OmniWM numbers from 0 (`switchWorkspace.0` is workspace 1). Others (`focusWindowInColumn.1`) start
+    /// at 1. Known here so the label stays right when the `.0` item is hidden or unassigned.
+    static let zeroBasedSeries: Set<String> = [
+        "switchWorkspace",
+        "moveToWorkspace",
+        "moveColumnToWorkspace",
+        "focusColumn",
+    ]
+
     static let modeActions: Set<String> = ["toggleWindowMode", "beginPrefix", "exitKeyboardMode"]
 
     private static let navigation: Set<String> = [

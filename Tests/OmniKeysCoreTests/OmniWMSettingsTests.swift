@@ -119,4 +119,10 @@ struct OmniWMSettingsTests {
         #expect(AppNames.fallback(for: "com.usebruno.app") == "Bruno")
         #expect(AppNames.fallback(for: "io.example.widgets.desktop") == "Widgets")
     }
+
+    @Test func listsEachFloatingAppOnce() throws {
+        let text = "[[appRules]]\nbundleId = \"a\"\nlayout = \"float\"\n\n[[appRules]]\nbundleId = \"b\"\nlayout = \"float\"\n"
+        let settings = try OmniWMSettings.parse(text, appName: { _ in "Teams" })
+        #expect(settings.floating == ["Teams"])
+    }
 }

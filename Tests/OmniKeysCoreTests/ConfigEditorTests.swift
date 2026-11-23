@@ -95,4 +95,29 @@ struct ConfigEditorTests {
         ])
         #expect(ConfigLoader.load(text).issues.isEmpty)
     }
+
+    @Test func labelForSeriesQuotesHandWrittenDottedKeysUnderIt() {
+        let text = "[labels]\nswitchWorkspace.next = \"N\"   # mine\n"
+        let result = ConfigEditor.label("switchWorkspace", to: "Go", in: text)
+        #expect(result == "[labels]\n\"switchWorkspace.next\" = \"N\"   # mine\nswitchWorkspace = \"Go\"\n")
+        #expect(ConfigLoader.load(result).issues.isEmpty)
+        #expect(ConfigLoader.load(result).config.labels == ["switchWorkspace.next": "N", "switchWorkspace": "Go"])
+    }
+
+    @Test func labelForSeriesMovesNestedLabelTableIntoLabels() {
+        let text = "[labels]\nfocus = \"F\"\n\n[labels.switchWorkspace]\nnext = \"N\"\n"
+        let result = ConfigEditor.label("switchWorkspace", to: "Go", in: text)
+        #expect(ConfigLoader.load(result).issues.isEmpty)
+        #expect(ConfigLoader.load(result).config.labels == [
+            "focus": "F", "switchWorkspace.next": "N", "switchWorkspace": "Go",
+        ])
+    }
+
+    @Test func editsAndRemovesLabelsInNestedTables() {
+        let text = "[labels]\nfocus = \"F\"\n\n[labels.switchWorkspace]\nnext = \"N\"\n"
+        let changed = ConfigEditor.label("switchWorkspace.next", to: "M", in: text)
+        #expect(changed == "[labels]\nfocus = \"F\"\n\n[labels.switchWorkspace]\nnext = \"M\"\n")
+        let removed = ConfigEditor.label("switchWorkspace.next", to: nil, in: text)
+        #expect(ConfigLoader.load(removed).config.labels == ["focus": "F"])
+    }
 }

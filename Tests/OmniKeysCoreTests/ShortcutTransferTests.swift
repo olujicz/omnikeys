@@ -80,4 +80,38 @@ struct ShortcutTransferTests {
             try ShortcutTransfer.apply(document, to: "[[hotkeys]]\nid = \"existing.action\"\nbinding = \"Hyper+E\"\n")
         }
     }
+
+    @Test func exportCarriesUnassignedActionsSoImportClearsThem() throws {
+        let source = try OmniWMSettings.parse(
+            "[[hotkeys]]\nid = \"focus.left\"\nbinding = \"Unassigned\"\n",
+            appName: { $0 }
+        )
+        let document = try ShortcutTransfer.import(data: ShortcutTransfer.export(settings: source))
+        let updated = try ShortcutTransfer.apply(
+            document,
+            to: "[[hotkeys]]\nid = \"focus.left\"\nbinding = \"Hyper+H\"\n"
+        )
+        #expect(updated.contains("binding = \"Unassigned\""))
+        #expect(!updated.contains("Hyper+H"))
+    }
+
+    @Test func appliesToCRLFFilesAndLinesWithComments() throws {
+        let original = "[general]\r\nhyperKeyModifiers=\"Control\"\r\n\r\n[[hotkeys]]\r\nid = \"focus.left\"\r\n"
+            + "binding = \"Hyper+H\"  # mine\r\n"
+        let document = ShortcutTransferDocument(
+            hyperKeyModifiers: "Option",
+            hotkeys: [ShortcutTransferHotkey(id: "focus.left", binding: "Hyper+J")]
+        )
+        let updated = try ShortcutTransfer.apply(document, to: original)
+        #expect(updated == "[general]\r\nhyperKeyModifiers=\"Option\"\r\n\r\n[[hotkeys]]\r\nid = \"focus.left\"\r\n"
+            + "binding = \"Hyper+J\"  # mine\r\n")
+    }
+
+    @Test func addsGeneralTableWithoutCapturingRootKeys() throws {
+        let original = "rootKey = 1\n\n[[hotkeys]]\nid = \"focus.left\"\nbinding = \"Hyper+H\"\n"
+        let document = ShortcutTransferDocument(hyperKeyModifiers: "Option", hotkeys: [])
+        let updated = try ShortcutTransfer.apply(document, to: original)
+        #expect(updated.hasPrefix("rootKey = 1\n"))
+        #expect(try OmniWMSettings.parse(updated, appName: { $0 }).hyperModifiers == "Option")
+    }
 }

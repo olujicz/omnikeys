@@ -14,7 +14,8 @@ final class PanelPresenter {
         panel?.isVisible ?? false
     }
 
-    func present(model: SheetModel, config: Config, on screen: NSScreen) {
+    /// - Parameter activate: false redraws an open sheet in place without taking focus from another app.
+    func present(model: SheetModel, config: Config, on screen: NSScreen, activate: Bool = true) {
         let visible = screen.visibleFrame
         let (width, layout) = layout(model: model, config: config, visible: visible, screen: screen)
         let size = NSSize(width: width, height: layout.fit.height + SheetPanel.searchBarHeight)
@@ -52,7 +53,7 @@ final class PanelPresenter {
         panel.onDismiss = { [weak self] restore in self?.dismiss(restoreFocus: restore) }
         panel.onOpenSettings = { [weak self] in self?.onOpenSettings?() }
         self.panel = panel
-        show(panel)
+        show(panel, activate: activate || !panel.isVisible)
     }
 
     private func replaceContent(of panel: CheatPanel, with content: NSView, frame: NSRect) {
@@ -63,10 +64,13 @@ final class PanelPresenter {
         content.layoutSubtreeIfNeeded()
     }
 
-    private func show(_ panel: CheatPanel) {
-        rememberPreviousApp()
-        NSApp.activate()
-        panel.makeKeyAndOrderFront(nil)
+    private func show(_ panel: CheatPanel, activate: Bool) {
+        if activate {
+            rememberPreviousApp()
+            NSApp.activate()
+            panel.makeKeyAndOrderFront(nil)
+        }
+        guard activate || panel.isKeyWindow else { return }
         if let field = panel.searchField, panel.makeFirstResponder(field), let editor = field.currentEditor() {
             // Focusing selects all; put the caret at the end so a redraw doesn't let the next key replace the query.
             editor.selectedRange = NSRange(location: (editor.string as NSString).length, length: 0)
