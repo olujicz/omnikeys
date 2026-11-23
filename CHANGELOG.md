@@ -34,7 +34,7 @@ All notable changes to this project are documented here. The format follows
 - Settings keeps a label you are typing, or a slider you are dragging, when the settings reload.
 - A hotkey that another app already owns no longer disables the one that worked.
 - Launch at Login shows the same state in the menu and in Settings, also when it waits for approval.
-- Export and Import dialogs open in front of other apps. Scrolling search results is smooth again.
+- Export and Import dialogs open in front of other apps.
 
 ### Changed
 - Bigger text on laptop screens. Automatic columns now pick 2, 3 or 4, whichever gives the biggest text.
