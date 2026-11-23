@@ -10,19 +10,9 @@ OmniKeys reads your shortcuts from OmniWM's settings, so the sheet is always cur
 
 ## Install
 
-```sh
-brew install --cask olujicz/tap/omnikeys
-```
-
-Or download the zip from [Releases](https://github.com/olujicz/omnikeys/releases) and move `OmniKeys.app` to Applications.
+There is no packaged release yet. Signed builds on [Releases](https://github.com/olujicz/omnikeys/releases) and a Homebrew cask are coming. Until then, [build from source](#build-from-source).
 
 Requires macOS 14 or later and OmniWM.
-
-Upgrading from the old `install.sh`? Remove its LaunchAgent first, otherwise it keeps relaunching the old app, which competes for the hotkey:
-
-```sh
-launchctl bootout gui/$(id -u)/local.omnikeys; rm ~/Library/LaunchAgents/local.omnikeys.plist
-```
 
 ## Use
 
@@ -54,11 +44,7 @@ An older `~/.config/omniwm/omnikeys.toml` is moved there automatically.
 log stream --predicate 'subsystem == "rs.in.olujic.omnikeys"'
 ```
 
-**Uninstall.**
-
-```sh
-brew uninstall --zap --cask omnikeys
-```
+**Uninstall.** Quit OmniKeys, delete `OmniKeys.app`, and remove `~/.config/omnikeys` if you want your settings gone too.
 
 ## Build from source
 
