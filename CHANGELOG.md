@@ -24,6 +24,17 @@ All notable changes to this project are documented here. The format follows
   apps installed or removed later the next time the sheet opens. `--render` still lists them, with
   readable names (Slack, Microsoft Teams, Bruno, DBeaver…) instead of bundle-id fragments or a web
   app's UUID.
+- Renaming a shortcut series in Settings no longer breaks `config.toml` when hand-written labels sit
+  under it (`switchWorkspace.next = …` or a `[labels.switchWorkspace]` table).
+- Export now includes unassigned shortcuts, so importing clears them on the other Mac. Import also
+  handles CRLF line endings, trailing comments and a symlinked `settings.toml`.
+- Workspace series show the right numbers when the first one is hidden or unassigned, and a gap
+  splits the range ("1–2, 4–5"). Next / previous workspace no longer hides the numbered series.
+- Changing a file while the sheet is open no longer takes focus from the app you are using.
+- Settings keeps a label you are typing, or a slider you are dragging, when the settings reload.
+- A hotkey that another app already owns no longer disables the one that worked.
+- Launch at Login shows the same state in the menu and in Settings, also when it waits for approval.
+- Export and Import dialogs open in front of other apps. Scrolling search results is smooth again.
 
 ### Changed
 - Bigger text on laptop screens. Automatic columns now pick 2, 3 or 4, whichever gives the biggest text.
