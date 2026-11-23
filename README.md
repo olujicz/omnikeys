@@ -11,6 +11,7 @@ OmniKeys reads your shortcuts from OmniWM's settings, so the sheet is always cur
 ## Install
 
 ```sh
+brew trust --cask olujicz/tap/omnikeys   # Homebrew 7 and later
 brew install --cask olujicz/tap/omnikeys
 ```
 
