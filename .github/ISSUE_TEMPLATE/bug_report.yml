@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in OmniKeys doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: omnikeys
+    attributes:
+      label: OmniKeys version
+      description: Menu-bar icon → About OmniKeys.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: omniwm
+    attributes:
+      label: OmniWM version
+      placeholder: "0.8.0"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "26.1"
+    validations:
+      required: true
+  - type: textarea
+    id: issues
+    attributes:
+      label: Warnings in the menu
+      description: Any ⚠︎ lines the menu-bar menu lists. Leave empty if there are none.
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant settings
+      description: >-
+        The parts of `~/.config/omnikeys/config.toml` or OmniWM's `settings.toml` involved, if any.
+        Remove anything you don't want to share.
+      render: toml
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of `log show --last 10m --predicate 'subsystem == "rs.in.olujic.omnikeys"'`, if relevant.
+      render: text

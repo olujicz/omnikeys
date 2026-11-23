@@ -1,0 +1,11 @@
+# Keeps the CI workflow's actions current. TOMLDecoder is declared in Project.swift (Tuist), which
+# Dependabot can't read, so it is updated by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
