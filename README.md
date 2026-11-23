@@ -10,7 +10,11 @@ OmniKeys reads your shortcuts from OmniWM's settings, so the sheet is always cur
 
 ## Install
 
-There is no packaged release yet. Signed builds on [Releases](https://github.com/olujicz/omnikeys/releases) and a Homebrew cask are coming. Until then, [build from source](#build-from-source).
+```sh
+brew install --cask olujicz/tap/omnikeys
+```
+
+Or download the zip from [Releases](https://github.com/olujicz/omnikeys/releases) and move `OmniKeys.app` to Applications.
 
 Requires macOS 14 or later and OmniWM.
 
@@ -30,8 +34,6 @@ Choose Settings… from the menu-bar icon, or press ⌘, while the sheet is open
 
 Settings are stored in `~/.config/omnikeys/config.toml`, with every option documented inline. You can also edit the file directly (Open Settings File… in the menu); changes apply within a second, and Settings keeps your comments when it saves.
 
-An older `~/.config/omniwm/omnikeys.toml` is moved there automatically.
-
 ## Troubleshooting
 
 **The hotkey does nothing.** Another app owns it. The menu shows ⚠︎. Pick another hotkey in Settings.
@@ -44,7 +46,11 @@ An older `~/.config/omniwm/omnikeys.toml` is moved there automatically.
 log stream --predicate 'subsystem == "rs.in.olujic.omnikeys"'
 ```
 
-**Uninstall.** Quit OmniKeys, delete `OmniKeys.app`, and remove `~/.config/omnikeys` if you want your settings gone too.
+**Uninstall.**
+
+```sh
+brew uninstall --zap --cask omnikeys
+```
 
 ## Build from source
 

@@ -12,7 +12,7 @@ let project = Project(
     settings: .settings(
         base: [
             "SWIFT_VERSION": "6.0",
-            "MARKETING_VERSION": "0.1.0",
+            "MARKETING_VERSION": "1.0.0",
             "CURRENT_PROJECT_VERSION": "1",
             "DEAD_CODE_STRIPPING": "YES",
             // CI flips OMNIKEYS_WARNINGS_AS_ERRORS; a command-line SWIFT_TREAT_WARNINGS_AS_ERRORS would also hit
